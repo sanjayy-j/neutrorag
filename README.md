@@ -102,7 +102,7 @@ policy) is testable in isolation. Swap in production pieces as you go:
 - **Fuzzy-collapse ablation** (`eval.fuzzy_collapse_ablation`): full neutrosophic
   vs. I+F merged — the experiment that justifies the whole design.
 
-## Roadmap (6-month plan)
+## Roadmap
 
 - [x] **M1–M2** — core library: TIF, scorer, five-way policy, FEVER PoC, tests ← *you are here*
 - [ ] **M2** — real NLI backend + GraphRAG baseline on HotpotQA / 2WikiMultiHopQA
