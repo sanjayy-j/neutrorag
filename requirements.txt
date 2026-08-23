@@ -1,0 +1,9 @@
+# Core library: zero heavy dependencies.
+numpy>=1.24
+
+# Optional (real NLI backend + retrieval stack) -- uncomment when you wire them in:
+# torch>=2.1
+# transformers>=4.40
+# sentence-transformers>=2.6
+# llama-index>=0.10          # or the microsoft graphrag package
+# neo4j>=5.18

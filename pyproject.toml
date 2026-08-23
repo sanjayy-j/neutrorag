@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neutrorag"
+version = "0.1.0"
+description = "A neutrosophic trust layer for retrieval-augmented generation: separates missing evidence from contradiction and abstains calibratedly."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.24"]
+license = { text = "MIT" }
+
+[project.optional-dependencies]
+nli = ["torch>=2.1", "transformers>=4.40"]
+dev = ["pytest>=7.0"]
+
+[tool.setuptools.packages.find]
+include = ["neutrorag*"]
