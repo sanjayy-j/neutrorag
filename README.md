@@ -86,11 +86,37 @@ The scaffold is deliberately dependency-light so the *contribution* (scoring +
 policy) is testable in isolation. Swap in production pieces as you go:
 
 - **Real NLI** — `from neutrorag import HFNLIBackend; scorer = NLIRetrievalScorer(nli=HFNLIBackend())`
-  (downloads `DeBERTa-v3-...-mnli-fever-anli` on first use).
-- **Real FEVER** — replace `fever.load_sample()` with `fever.load_fever_jsonl(path)`.
+  (downloads `DeBERTa-v3-...-mnli-fever-anli` on first `predict()` call, then caches
+  the loaded pipeline; pass `device="cuda"` to use a GPU).
+- **Real FEVER** — replace `fever.load_sample()` with `fever.load_fever_hf()` (HuggingFace
+  Hub, evidence text included inline -- see below) or `fever.load_fever_jsonl(path)` for
+  your own local data.
 - **GraphRAG retriever** — feed your retrieved passages in as `Evidence(text, relevance)`;
   the `expand_fn` callback is where you plug re-querying / subgraph widening
   (LlamaIndex or Microsoft GraphRAG + Neo4j).
+
+## Reproducing the FEVER premise check
+
+`demo.py` uses the mock NLI backend and an embedded 12-example sample -- illustrative
+only. For genuine numbers, `experiments/run_fever_eval.py` loads real FEVER claims and
+scores them with a real HuggingFace NLI model:
+
+```bash
+pip install -e ".[nli]"     # torch, transformers, datasets
+python experiments/run_fever_eval.py --limit 200
+# optional: --model <hf-model-id> --device cpu|cuda
+```
+
+Raw FEVER (Thorne et al., 2018) only records evidence as `(wikipedia_page,
+sentence_id)` pointers, not sentence text, so scoring it means joining against the
+~5M-sentence Wikipedia dump the annotators used. `neutrorag.fever.load_fever_hf`
+sidesteps that by loading
+[`copenlu/fever_gold_evidence`](https://huggingface.co/datasets/copenlu/fever_gold_evidence)
+from the HuggingFace Hub, which bundles each claim with resolved evidence *text*
+inline: gold evidence for SUPPORTS/REFUTES, and a system-retrieved
+topically-related-but-non-confirming sentence for NOT ENOUGH INFO (from the
+adversarial-claims pipeline in Atanasova et al., EMNLP 2020). See the docstring in
+`neutrorag/fever.py` for the exact row format.
 
 ## Evaluation
 
