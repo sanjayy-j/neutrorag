@@ -1,0 +1,8 @@
+numpy>=1.24
+
+[dev]
+pytest>=7.0
+
+[nli]
+torch>=2.1
+transformers>=4.40
