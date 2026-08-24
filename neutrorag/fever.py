@@ -6,13 +6,27 @@ of the NeutroRAG premise: if the (T, I, F) scorer's dominant channel matches the
 gold label, the core hypothesis holds.
 
 A small synthetic FEVER-style sample is embedded so this runs offline. Replace
-``load_sample()`` with :func:`load_fever_jsonl` to score the real dataset.
+``load_sample()`` with :func:`load_fever_hf` (real dataset, HuggingFace Hub) or
+:func:`load_fever_jsonl` (real dataset, your own JSONL) to score the real thing.
+
+**The FEVER evidence gotcha.** Raw FEVER (Thorne et al., 2018) records evidence
+only as ``(wikipedia_page, sentence_id)`` pointers -- the sentence *text* isn't
+in the dataset at all, so scoring it requires joining against a ~5M-sentence
+Wikipedia dump the annotators used, which is out of scope for a premise check.
+:func:`load_fever_hf` sidesteps this by loading
+`copenlu/fever_gold_evidence <https://huggingface.co/datasets/copenlu/fever_gold_evidence>`_
+from the HuggingFace Hub, which already bundles each claim with the resolved
+evidence *text* inline: gold evidence sentences for SUPPORTS/REFUTES (from the
+original FEVER annotations), and a system-retrieved, topically-related-but-
+non-confirming sentence for NOT ENOUGH INFO (from the adversarial-claims
+pipeline in Atanasova et al., EMNLP 2020). Each row's ``evidence`` field is a
+list of ``[wikipedia_page, sentence_id, sentence_text]`` triples.
 """
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import List, Sequence
+from typing import Iterable, List, Optional, Sequence
 
 from .scoring import Evidence, NLIRetrievalScorer
 
@@ -97,6 +111,53 @@ def load_fever_jsonl(path: str, max_examples: int | None = None) -> List[FeverEx
             if max_examples and len(out) >= max_examples:
                 break
     return out
+
+
+def _examples_from_rows(rows: Iterable[dict], max_examples: Optional[int] = None) -> List[FeverExample]:
+    """Convert rows shaped like ``copenlu/fever_gold_evidence`` (claim, label,
+    evidence=[[page, sentence_id, text], ...]) into :class:`FeverExample`.
+
+    Split out from :func:`load_fever_hf` so the parsing logic can be unit-tested
+    with an inline fixture, with no network call or dataset library involved.
+    Unknown labels are skipped; malformed or empty evidence entries are dropped
+    rather than raising, since NEI rows and dataset noise can legitimately lack
+    usable evidence text.
+    """
+    out: List[FeverExample] = []
+    for row in rows:
+        label = row["label"].upper()
+        if label not in LABEL_TO_CHANNEL:
+            continue
+        sents: List[str] = []
+        for item in row.get("evidence") or []:
+            if isinstance(item, (list, tuple)) and len(item) >= 3 and item[2]:
+                sents.append(str(item[2]))
+        out.append(FeverExample(
+            claim=row["claim"],
+            evidence=[Evidence(s, relevance=0.9) for s in sents],
+            gold_label=label,
+        ))
+        if max_examples and len(out) >= max_examples:
+            break
+    return out
+
+
+def load_fever_hf(
+    split: str = "validation",
+    max_examples: Optional[int] = None,
+    dataset_name: str = "copenlu/fever_gold_evidence",
+) -> List[FeverExample]:
+    """Load real FEVER claims with resolved evidence text from the HuggingFace Hub.
+
+    See the module docstring for why ``copenlu/fever_gold_evidence`` (rather
+    than raw FEVER) is the pragmatic choice here. Requires the optional
+    ``datasets`` dependency (kept out of the core library's import path).
+    """
+    from datasets import load_dataset  # noqa: local import -- optional, heavy dep
+
+    split_expr = f"{split}[:{max_examples}]" if max_examples else split
+    rows = load_dataset(dataset_name, split=split_expr)
+    return _examples_from_rows(rows, max_examples=max_examples)
 
 
 def score_examples(examples: Sequence[FeverExample], scorer: NLIRetrievalScorer):

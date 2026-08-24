@@ -71,17 +71,43 @@ class HFNLIBackend:
     """Real NLI via HuggingFace transformers (optional, downloaded on first use).
 
     Example model: ``MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli``.
-    Kept lazy so the core library has zero heavy dependencies.
+    The ``transformers`` import and the model/pipeline load are both deferred
+    until the first :meth:`predict` call (not ``__init__``) so constructing a
+    backend -- e.g. via a CLI default argument -- never pays the load cost or
+    requires the dependency unless it is actually used. Loaded pipelines are
+    cached per (model, device) at the class level, so multiple backends (or
+    repeated instantiation) that share a model don't reload the weights.
     """
 
-    def __init__(self, model: str = "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli"):
-        from transformers import pipeline  # noqa: local import by design
+    _pipeline_cache: dict = {}
 
-        self._pipe = pipeline("text-classification", model=model, top_k=None)
+    def __init__(
+        self,
+        model: str = "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",
+        device: str = "cpu",
+    ):
         self._model = model
+        self._device = device
+        self._pipe = None  # lazy -- populated by _load() on first predict()
+
+    def _load(self):
+        if self._pipe is None:
+            key = (self._model, self._device)
+            if key not in HFNLIBackend._pipeline_cache:
+                from transformers import pipeline  # noqa: local import by design
+
+                HFNLIBackend._pipeline_cache[key] = pipeline(
+                    "text-classification",
+                    model=self._model,
+                    top_k=None,
+                    device=self._device,
+                )
+            self._pipe = HFNLIBackend._pipeline_cache[key]
+        return self._pipe
 
     def predict(self, premise: str, hypothesis: str) -> Tuple[float, float, float]:
-        out = self._pipe({"text": premise, "text_pair": hypothesis})
+        pipe = self._load()
+        out = pipe({"text": premise, "text_pair": hypothesis})
         scores = {d["label"].lower(): d["score"] for d in out}
         e = scores.get("entailment", 0.0)
         n = scores.get("neutral", 0.0)
