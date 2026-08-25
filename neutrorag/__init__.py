@@ -13,6 +13,9 @@ from .scoring import (
     NLIBackend,
 )
 from .policy import Action, PolicyConfig, Decision, Step, NeutroPolicy
+from .retrieval import DenseRetriever, Document, EmbeddingBackend, SentenceTransformerBackend
+from .graph import KnowledgeGraph, Fact
+from .generation import Responder, TemplateResponder, OllamaResponder
 
 __version__ = "0.1.0"
 
@@ -20,5 +23,8 @@ __all__ = [
     "TIF", "CollapsedScore", "clamp",
     "Evidence", "NLIRetrievalScorer", "MockNLIBackend", "HFNLIBackend", "NLIBackend",
     "Action", "PolicyConfig", "Decision", "Step", "NeutroPolicy",
+    "DenseRetriever", "Document", "EmbeddingBackend", "SentenceTransformerBackend",
+    "KnowledgeGraph", "Fact",
+    "Responder", "TemplateResponder", "OllamaResponder",
     "__version__",
 ]

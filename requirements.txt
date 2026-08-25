@@ -1,10 +1,14 @@
-# Core library: zero heavy dependencies.
+# Core library: light dependencies only.
 numpy>=1.24
+networkx>=3.0                # neutrorag/graph.py -- in-memory knowledge graph
 
-# Optional (real NLI backend + retrieval stack) -- uncomment when you wire them in:
+# Optional (real NLI + real embeddings + real FEVER data) -- uncomment when you wire them in:
 # torch>=2.1
 # transformers>=4.40
-# datasets>=2.19             # real FEVER data for experiments/run_fever_eval.py
-# sentence-transformers>=2.6
+# datasets>=2.19              # real FEVER data for experiments/run_fever_eval.py
+# sentence-transformers>=2.6  # neutrorag/retrieval.py -- real dense retrieval
+
+# Not used by anything in this repo yet -- for a future production-scale swap:
 # llama-index>=0.10          # or the microsoft graphrag package
-# neo4j>=5.18
+# neo4j>=5.18                 # storage backend for graph.KnowledgeGraph, if scale requires it
+# (Ollama itself is a separate local service, not a pip package -- see generation.py)

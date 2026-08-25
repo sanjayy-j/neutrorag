@@ -51,9 +51,10 @@ separates NeutroRAG from prior selective-prediction / abstention work.
 ## Quickstart
 
 ```bash
-pip install -e .        # or: pip install numpy
-python demo.py          # FEVER premise check + policy + ablation (offline mock NLI)
-pytest -q               # 17 unit tests
+pip install -e .                          # numpy + networkx (core deps)
+python demo.py                            # FEVER premise check + policy + ablation (offline mock NLI)
+python experiments/run_pipeline_demo.py   # full pipeline: graph + dense retrieval -> trust layer -> response
+pytest -q                                 # 35 unit tests
 ```
 
 ```python
@@ -71,19 +72,25 @@ print(decision.action, decision.tif)   # Action.SURFACE_CONTRADICTION TIF(T=0.09
 
 ```
 neutrorag/
-  core.py      # TIF triple: independence, confidence, collapse() for the ablation
-  scoring.py   # NLIRetrievalScorer + pluggable NLI backends (Mock / HuggingFace)
-  policy.py    # NeutroPolicy: the five-way staged decision controller
-  eval.py      # risk-coverage, ECE, failure-type attribution, fuzzy-collapse ablation
-  fever.py     # FEVER -> (T,I,F) proof-of-concept (SUPPORTS/REFUTES/NEI == T/F/I)
-tests/         # unit tests for core, policy, scoring
-demo.py        # runnable end-to-end demonstration
+  core.py        # TIF triple: independence, confidence, collapse() for the ablation  [frozen]
+  scoring.py     # NLIRetrievalScorer + pluggable NLI backends (Mock / HuggingFace)
+  policy.py      # NeutroPolicy: the five-way staged decision controller              [frozen]
+  eval.py        # risk-coverage, ECE, failure-type attribution, fuzzy-collapse ablation
+  fever.py       # FEVER -> (T,I,F) proof-of-concept (SUPPORTS/REFUTES/NEI == T/F/I)
+  retrieval.py   # DenseRetriever: real sentence-embedding + cosine-similarity retrieval
+  graph.py       # KnowledgeGraph: in-memory multi-hop graph retrieval (networkx)
+  generation.py  # Responder: TemplateResponder (deterministic) / OllamaResponder (real LLM)
+tests/           # unit tests for every module above (offline, no network/model download)
+demo.py                          # trust-layer-only demonstration (offline mock NLI)
+experiments/run_fever_eval.py    # trust layer on real FEVER data + real NLI model
+experiments/run_pipeline_demo.py # the full pipeline: retrieval -> trust layer -> generation
 ```
 
 ## Wiring in the real components
 
-The scaffold is deliberately dependency-light so the *contribution* (scoring +
-policy) is testable in isolation. Swap in production pieces as you go:
+The core trust layer (`scoring.py` + `policy.py`) is deliberately dependency-light
+and testable in isolation. Everything around it is now real, working code too --
+scoped deliberately for a project at this size rather than left as a placeholder:
 
 - **Real NLI** — `from neutrorag import HFNLIBackend; scorer = NLIRetrievalScorer(nli=HFNLIBackend())`
   (downloads `DeBERTa-v3-...-mnli-fever-anli` on first `predict()` call, then caches
@@ -91,9 +98,29 @@ policy) is testable in isolation. Swap in production pieces as you go:
 - **Real FEVER** — replace `fever.load_sample()` with `fever.load_fever_hf()` (HuggingFace
   Hub, evidence text included inline -- see below) or `fever.load_fever_jsonl(path)` for
   your own local data.
-- **GraphRAG retriever** — feed your retrieved passages in as `Evidence(text, relevance)`;
-  the `expand_fn` callback is where you plug re-querying / subgraph widening
-  (LlamaIndex or Microsoft GraphRAG + Neo4j).
+- **Retrieval** — `neutrorag.retrieval.DenseRetriever`: real sentence embeddings
+  (`sentence-transformers`, `all-MiniLM-L6-v2` by default) + cosine similarity over an
+  in-memory corpus, producing `Evidence` with genuine relevance scores instead of
+  hand-picked ones.
+- **Graph retrieval ("GraphRAG")** — `neutrorag.graph.KnowledgeGraph`: an in-memory,
+  `networkx`-backed directed graph of (subject, relation, object) facts, each edge
+  carrying the sentence that asserts it, with breadth-first multi-hop retrieval and
+  hop-distance relevance decay. **Scope, stated plainly**: this is in-memory, not
+  Neo4j-backed — a deliberate, permanent design choice at this project's scale, not
+  a stand-in awaiting an upgrade. `KnowledgeGraph.add_fact` / `.retrieve` is the
+  entire integration surface the rest of the system depends on; a Neo4j-backed
+  implementation of that same surface could replace it later without touching
+  `scoring.py` or `policy.py`.
+- **Response generation** — `neutrorag.generation`: `TemplateResponder` (default,
+  deterministic, stdlib-only -- generates the final response per `Action`, so the
+  caveat/conflict structure the policy decided on can't be silently dropped) or
+  `OllamaResponder` (a real call to a locally running [Ollama](https://ollama.com)
+  server's `/api/generate` endpoint, via `urllib` only -- no new dependency; run
+  `ollama serve` and `ollama pull llama3.2` to use it).
+- **`expand_fn`** — the policy's retrieval-expansion callback now has a real thing to
+  call: see `experiments/run_pipeline_demo.py`, where it re-queries both
+  `KnowledgeGraph` (wider hop radius) and `DenseRetriever` (larger *k*) under high
+  indeterminacy.
 
 ## Reproducing the FEVER premise check
 
@@ -118,6 +145,24 @@ topically-related-but-non-confirming sentence for NOT ENOUGH INFO (from the
 adversarial-claims pipeline in Atanasova et al., EMNLP 2020). See the docstring in
 `neutrorag/fever.py` for the exact row format.
 
+## Reproducing the full pipeline (retrieval -> trust layer -> generation)
+
+`experiments/run_pipeline_demo.py` is the one script that runs every stage of the
+architecture end-to-end -- graph + dense retrieval feeding real `Evidence` into the
+trust layer, the staged policy re-retrieving under indeterminacy, and a response
+generator producing the final text:
+
+```bash
+python experiments/run_pipeline_demo.py                            # offline: mock NLI, template response
+python experiments/run_pipeline_demo.py --nli real                 # real DeBERTa-v3 NLI model
+python experiments/run_pipeline_demo.py --nli real --responder ollama --llm-model llama3.2
+python experiments/run_pipeline_demo.py --claim "Your own claim here."
+```
+
+The first run downloads the retrieval embedding model (`all-MiniLM-L6-v2`, ~90MB,
+cached after that). `--responder ollama` requires `ollama serve` running locally
+with the requested model pulled.
+
 ## Evaluation
 
 - **Failure-type attribution** (the distinctive metric): does `argmax(T, I, F)`
@@ -130,18 +175,26 @@ adversarial-claims pipeline in Atanasova et al., EMNLP 2020). See the docstring 
 
 ## Roadmap
 
-- [x] **M1–M2** — core library: TIF, scorer, five-way policy, FEVER PoC, tests ← *you are here*
-- [ ] **M2** — real NLI backend + GraphRAG baseline on HotpotQA / 2WikiMultiHopQA
-- [ ] **M3** — full experiments + **fuzzy-collapse ablation** → go/no-go checkpoint
+- [x] **M1–M2** — core library: TIF, scorer, five-way policy, FEVER PoC, tests
+- [x] **M2** — real NLI backend (`HFNLIBackend`) + real FEVER data + real dense/graph
+  retrieval + response generation, wired end-to-end ← *you are here*
+- [ ] **M2.5** — GraphRAG baseline on HotpotQA / 2WikiMultiHopQA (currently the graph
+  is a small hand-built in-memory example, not built from a corpus)
+- [ ] **M3** — full experiments at scale + calibration (`eval.risk_coverage` /
+  `eval.expected_calibration_error` exist but aren't exercised or tested yet)
 - [ ] **M4** — FEVER failure-type attribution at scale + open-source release
 - [ ] **M5** — learned neutrosophic aggregator (ANFIS/MLP) + clinical case study
 - [ ] **M6** — paper + provisional-patent draft + demo dashboard
 
 ## Status
 
-Research scaffold. All numbers printed by `demo.py` come from a **deterministic
-mock NLI backend** and are illustrative only — swap in a real NLI model and
-dataset for paper-grade results.
+The trust layer (`scoring.py` + `policy.py`) is the frozen research contribution.
+Around it, retrieval (`retrieval.py`, `graph.py`), real NLI (`HFNLIBackend`), real
+FEVER data (`fever.load_fever_hf`), and response generation (`generation.py`) are
+all real, working, tested code — not mocks. Two things stay honestly scaffolded:
+`demo.py` still runs on the deterministic mock NLI backend by design, for fast,
+offline, illustrative output; and `graph.py`'s knowledge graph is hand-built and
+in-memory rather than constructed from a real corpus at scale (see the Roadmap).
 
 ## License
 
