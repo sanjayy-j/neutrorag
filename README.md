@@ -131,7 +131,7 @@ adversarial-claims pipeline in Atanasova et al., EMNLP 2020). See the docstring 
 ## Roadmap
 
 - [x] **M1–M2** — core library: TIF, scorer, five-way policy, FEVER PoC, tests ← *you are here*
-- [ ] **M2** — real NLI backend + GraphRAG baseline on HotpotQA / 2WikiMultiHopQA
+- [x] **M2** — real NLI backend + GraphRAG baseline on HotpotQA / 2WikiMultiHopQA
 - [ ] **M3** — full experiments + **fuzzy-collapse ablation** → go/no-go checkpoint
 - [ ] **M4** — FEVER failure-type attribution at scale + open-source release
 - [ ] **M5** — learned neutrosophic aggregator (ANFIS/MLP) + clinical case study
