@@ -63,8 +63,15 @@ class MockNLIBackend:
             return (0.05, 0.90, 0.05)  # off-topic -> neutral
         strength = clamp(0.2 + overlap)
         if negated:
-            return (clamp(0.1), clamp(1 - strength - 0.1), clamp(strength))
-        return (clamp(strength), clamp(1 - strength - 0.1), clamp(0.1))
+            e, n, c = clamp(0.1), clamp(1 - strength - 0.1), clamp(strength)
+        else:
+            e, n, c = clamp(strength), clamp(1 - strength - 0.1), clamp(0.1)
+        # Renormalise so the triple is a distribution. Clamping truncates the
+        # neutral term at 0 for high overlap, which otherwise returns e.g.
+        # (0.10, 0.00, 1.00) summing to 1.1. HFNLIBackend.predict already
+        # normalises the same way.
+        s = e + n + c or 1.0
+        return (e / s, n / s, c / s)
 
 
 class HFNLIBackend:

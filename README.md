@@ -63,9 +63,23 @@ from neutrorag import Evidence, NeutroPolicy, NLIRetrievalScorer
 scorer = NLIRetrievalScorer()          # mock NLI by default (offline)
 policy = NeutroPolicy()
 
+# Contradicted claim -> surface the conflict.
 evidence = [Evidence("Sharks are not mammals; they are fish.", relevance=0.9)]
 decision = policy.run("Sharks are mammals.", evidence, scorer.score)
-print(decision.action, decision.tif)   # Action.SURFACE_CONTRADICTION TIF(T=0.09, I=0.10, F=1.00)
+print(decision.action, decision.tif)
+# Action.SURFACE_CONTRADICTION TIF(T=0.082, I=0.100, F=0.909)
+
+# High indeterminacy -> EXPAND. The policy can only act on that if you give it
+# an expand_fn; without one it falls straight through to ABSTAIN.
+def expand_fn(claim, evidence, step):
+    """Your retriever goes here -- it must return NEW passages to be useful."""
+    return list(evidence) + [Evidence("The heart is a muscular organ that pumps blood.", 0.9)]
+
+weak = [Evidence("The region has a temperate climate.", relevance=0.3)]
+print(policy.run("The heart pumps blood.", weak, scorer.score, expand_fn).action)
+# Action.ANSWER          (after 1 expansion)
+print(policy.run("The heart pumps blood.", weak, scorer.score).action)
+# Action.ABSTAIN         (no expand_fn -> expansion budget is unusable)
 ```
 
 ## Project layout
