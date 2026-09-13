@@ -12,6 +12,16 @@ both. NeutroRAG keeps them apart.
 > Positioning: this is **trustworthy / uncertainty-aware retrieval**. The
 > neutrosophic (T, I, F) formalism is the *mechanism*, not the headline.
 
+> [!IMPORTANT]
+> **Several claims below are under review following a supervisory code audit.**
+> See [RESULTS.md](RESULTS.md) for what is retracted and why. In short: the 0.745
+> FEVER figure is not attributable to the neutrosophic layer (a raw `argmax(e,n,c)`
+> baseline on the identical NLI calls scores 0.755), the `+0.205` fuzzy-collapse
+> delta is arithmetic rather than an experiment, and `T + I + F = 1 + lambda*disagree`
+> identically -- so the independence framing in the next section does not hold as
+> written. Rewriting it is a pending supervisory decision and has deliberately
+> **not** been done here.
+
 ---
 
 ## Why (T, I, F) and not a probability or a fuzzy score
@@ -54,7 +64,7 @@ separates NeutroRAG from prior selective-prediction / abstention work.
 pip install -e .                          # numpy + networkx (core deps)
 python demo.py                            # FEVER premise check + policy + ablation (offline mock NLI)
 python experiments/run_pipeline_demo.py   # full pipeline: graph + dense retrieval -> trust layer -> response
-pytest -q                                 # 35 unit tests
+pytest -q                                 # 44 passed, 6 skipped, 1 xfailed (see RESULTS.md)
 ```
 
 ```python
