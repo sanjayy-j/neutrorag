@@ -22,8 +22,9 @@ this file, it does not go in the report.
 | **Gate B** (definition of `r`) | signed off, revised; `r` implemented AND `I = max(1-r, n)`. **Prediction confirmed — the mass identity is broken** |
 | **Gate C** (expansion loop not a no-op) | test written and **passing** — see below |
 
-> **Still open:** the repeated Gate A on Step 9 data. The r-ablation and the F12
-> sweep have now run — see below; both are heavily confounded by memo F9.
+> **Step 6 landed** (pairwise `disagree`), and **Step 9 (CONFLICTS) ran and was
+> halted** on its own stop conditions — but for a measurement error, not a
+> finding about the method. See the Step 9 section.
 
 ---
 
@@ -125,6 +126,85 @@ attribution (0.455–0.470 over 0–2) but monotonically raises the
 SURFACE_CONTRADICTION rate. `connectivity` and `diversity` weights are inert on
 FEVER; at weight 1.0 for either, every *available* component has zero weight and
 `r` falls to 0.
+
+## Step 6: pairwise `disagree` — fixes F6 and F8
+
+`scoring.py`: `disagree = 2·min(e, c)` on the pooled means becomes
+`2·max over pairs (i,j) of min(e_i, c_j)` on the per-passage outputs. `T`, `F`,
+`I` and `lambda` byte-identical.
+
+```bash
+python experiments/check_conflict_dilution.py --nli real
+```
+
+| filler passages added | 0 | 1 | 2 | 3 | 4 | spread |
+|---|---:|---:|---:|---:|---:|---:|
+| `disagree` OLD (pooled) | 0.847 | 0.643 | 0.525 | 0.452 | 0.400 | **0.446** |
+| `disagree` NEW (pairwise) | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | **0.000** |
+| raw, unclamped | 1.739 | 1.739 | 1.739 | 1.739 | 1.739 | 0.000 |
+
+The raw value is identical at every filler count, so the flatness is genuine
+invariance, not clipping. `F` itself still drifts 0.812 → 0.692 because
+`F = r·c + λ·disagree` and both `r` and the pooled `c` fall as filler is added;
+only the `disagree` term was ever expected flat.
+
+**F8 is fixed.** The flagship drug-trial case now returns **SURFACE_CONTRADICTION
+with F = 0.812** (real NLI) against `tau_F = 0.40`, versus the memo's F = 0.347
+and ABSTAIN. It still fires with 4 filler passages added (F = 0.692).
+
+Mass identity still broken (2.497e-01). FEVER numbers **bit-identical** — with
+one caveat: `fever_run_200.csv` stores the *pooled* triple per claim, so on
+replay every passage carries the same values and pairwise ≡ pooled by
+construction for **all** row sizes, not only the 185 single-passage ones.
+
+## Step 9: CONFLICTS — run, halted, and not interpretable as intended
+
+Dataset: Cattan et al., arXiv 2506.08500,
+[google-research-datasets/rag_conflicts](https://github.com/google-research-datasets/rag_conflicts).
+458 instances, 9.20 passages each, 8.33 domains each. **The release publishes no
+retrieval score** — relevance is derived as question–passage cosine similarity
+(see `conflicts.RELEVANCE_SOURCE`). Scored a seeded stratified sample of 130
+instances / 1210 passages (~107 min CPU).
+
+```bash
+python experiments/score_conflicts.py && python experiments/run_conflicts_eval.py
+python experiments/diagnose_conflicts_hypothesis.py
+```
+
+### The headline numbers, and why they must not be read at face value
+
+| | result | stop condition |
+|---|---|---|
+| 3b `disagree` by type | Conflicting opinions median **0.222** vs No conflict median **0.556**; Mann-Whitney p = 2.14e-03 — **reversed** | triggered |
+| 3c policy test | exact-match **0.267** (CI 0.175–0.358, n=90); SURFACE_CONTRADICTION recall **0.200**, firing on 20/45 *No conflict* vs 9/45 *Conflicting opinions* | triggered |
+| 3a/3d r-ablation | **null**: r=0.9 and r=sufficiency agree on **128/130** | uninformative |
+
+**The cause is a measurement error.** CONFLICTS is a QA dataset; its instances
+are *questions* ("what is the most common blood type"), and each question was
+passed to the NLI model as the hypothesis. Entailment against an interrogative
+is not a well-posed problem, and the output shows it: median entailment 0.709
+(59.6% above 0.5), **median contradiction 0.017**. The model marks any on-topic
+passage "entailing" and emits arbitrary contradiction scores.
+
+Concretely: the highest-`disagree` *No conflict* instance pairs a blood-type
+frequency table (e=0.985) against a generic "Blood Types — as you probably
+know…" intro (c=0.993) — neither contradicts anything. The lowest-`disagree`
+*Conflicting opinions* instance has max contradiction **0.014** across 7
+passages, because none of them contradicts a question. `correct_answer` is
+non-empty for only 237/458 instances, so this cannot be patched by forming
+question+answer claims.
+
+**So 3b and 3c are not evidence that `disagree` or the policy are wrong.** They
+are evidence that the scorer was applied outside its task definition.
+
+### What the run does establish
+
+`support_count` and `diversity` **saturate at 1.0** on every instance (≥5
+passages, ≥3 domains, frozen target 3); `r` spans only 0.867–1.000 with 0/130
+below 0.5. FEVER pinned `r` low (median 0.417, 143/200 below 0.5); CONFLICTS
+pins it high. **Neither venue exercises `r` across its range**, which is a
+property of the components' targets, not of either dataset. Reported, not
+retuned.
 
 ## RETRACTED
 
