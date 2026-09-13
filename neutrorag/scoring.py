@@ -19,9 +19,13 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import List, Protocol, Sequence, Tuple
+from typing import List, Optional, Protocol, Sequence, Tuple
 
 from .core import TIF, clamp
+from .sufficiency import (
+    DEFAULT_WEIGHTS, GraphLike, SufficiencyBreakdown, SufficiencyWeights,
+    retrieval_sufficiency,
+)
 
 _WORD = re.compile(r"[a-z0-9]+")
 _NEGATION = {
@@ -128,10 +132,17 @@ class HFNLIBackend:
 # ---------------------------------------------------------------------------
 @dataclass
 class Evidence:
-    """A retrieved passage with its retrieval relevance in [0, 1]."""
+    """A retrieved passage with its retrieval relevance in [0, 1].
+
+    ``source`` is the document/origin the passage came from. It is optional and
+    purely retrieval-side metadata, used by the diversity component of
+    :mod:`neutrorag.sufficiency`; when it is None that component is dropped
+    rather than scored zero.
+    """
 
     text: str
     relevance: float = 1.0
+    source: Optional[str] = None
 
 
 @dataclass
@@ -140,6 +151,37 @@ class NLIRetrievalScorer:
 
     nli: NLIBackend = field(default_factory=MockNLIBackend)
     lam: float = 0.5  # weight of cross-source disagreement in F
+
+    # -- retrieval sufficiency (Gate B, route (i)) --------------------------
+    # r is computed by neutrorag.sufficiency from retrieval-side quantities
+    # only. Supplying a graph enables the connectivity component; supplying
+    # Evidence.source enables diversity. Both degrade gracefully when absent.
+    graph: Optional[GraphLike] = None
+    sufficiency_weights: SufficiencyWeights = DEFAULT_WEIGHTS
+    # Set to a float to bypass the sufficiency computation and pin r to that
+    # value. Exists for the r-ablation (r = 0.9 reproduces the pre-Gate-B
+    # behaviour exactly); not for production use.
+    r_override: Optional[float] = None
+
+    def sufficiency(self, claim: str, evidence: Sequence[Evidence]) -> SufficiencyBreakdown:
+        """Compute r and its per-component breakdown for this claim/evidence set.
+
+        Pure and NLI-free: this makes no model call, so instrumentation can
+        report r alongside e/n/c without perturbing anything.
+        """
+        usable = [e for e in evidence if e.text.strip()]
+        if self.r_override is not None:
+            return SufficiencyBreakdown(r=clamp(self.r_override),
+                                        components={}, weights_used={})
+        sources = [e.source for e in usable]
+        return retrieval_sufficiency(
+            claim,
+            passages=[e.text for e in usable],
+            relevances=[clamp(e.relevance) for e in usable],
+            sources=sources if any(s for s in sources) else None,
+            graph=self.graph,
+            weights=self.sufficiency_weights,
+        )
 
     def score(self, claim: str, evidence: Sequence[Evidence]) -> TIF:
         evidence = [e for e in evidence if e.text.strip()]
@@ -160,7 +202,7 @@ class NLIRetrievalScorer:
         n = sum(w * x for w, x in zip(weights, neu)) / wsum
         c = sum(w * x for w, x in zip(weights, con)) / wsum
 
-        r = clamp(max(weights))            # retrieval sufficiency
+        r = clamp(self.sufficiency(claim, evidence).r)  # retrieval sufficiency
         disagree = clamp(2.0 * min(e, c))  # high only if BOTH support & conflict present
 
         T = clamp(r * e)

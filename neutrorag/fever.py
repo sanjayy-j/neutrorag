@@ -32,6 +32,25 @@ from .scoring import Evidence, NLIRetrievalScorer
 
 LABEL_TO_CHANNEL = {"SUPPORTS": "T", "NOT ENOUGH INFO": "I", "REFUTES": "F"}
 
+# FEVER evidence is GOLD -- annotator-selected, not retrieved -- so no retriever
+# ever scored it and there is no relevance to report. It is therefore a stated
+# assumption, not a measurement: the annotator picked this sentence precisely
+# because it decides the label, so it is maximally relevant by construction.
+#
+# This was 0.9 until Gate B. 0.9 was worse than wrong, it was fake precision: it
+# looked like a retriever score while being a constant, which is how r came to
+# carry no information at all across the whole corpus (memo F1). 1.0 states the
+# assumption honestly.
+#
+# MEMO F9 -- READ BEFORE USING FEVER TO TEST r. Because this constant is the
+# same for every row, FEVER CANNOT EXERCISE r. The support_count and diversity
+# components see one identical value per passage; 185 of 200 rows carry a single
+# passage; and gold evidence points one way per claim, so `disagree` is near
+# zero throughout. FEVER remains a valid sanity check of the scorer's label
+# attribution. It is NOT a test of retrieval sufficiency, and any r-dependent
+# claim measured on it is measuring this constant.
+GOLD_EVIDENCE_RELEVANCE = 1.0
+
 
 @dataclass
 class FeverExample:
@@ -47,7 +66,7 @@ class FeverExample:
 def load_sample() -> List[FeverExample]:
     """A tiny, balanced, embedded sample (offline). Illustrative, not for the paper."""
     def ev(*texts: str) -> List[Evidence]:
-        return [Evidence(t, relevance=0.9) for t in texts]
+        return [Evidence(t, relevance=GOLD_EVIDENCE_RELEVANCE) for t in texts]
 
     return [
         # --- SUPPORTS (evidence entails the claim) ---
@@ -105,7 +124,7 @@ def load_fever_jsonl(path: str, max_examples: int | None = None) -> List[FeverEx
             sents = row.get("evidence_sentences", []) or []
             out.append(FeverExample(
                 claim=row["claim"],
-                evidence=[Evidence(s, relevance=0.9) for s in sents],
+                evidence=[Evidence(s, relevance=GOLD_EVIDENCE_RELEVANCE) for s in sents],
                 gold_label=label,
             ))
             if max_examples and len(out) >= max_examples:
@@ -134,7 +153,7 @@ def _examples_from_rows(rows: Iterable[dict], max_examples: Optional[int] = None
                 sents.append(str(item[2]))
         out.append(FeverExample(
             claim=row["claim"],
-            evidence=[Evidence(s, relevance=0.9) for s in sents],
+            evidence=[Evidence(s, relevance=GOLD_EVIDENCE_RELEVANCE) for s in sents],
             gold_label=label,
         ))
         if max_examples and len(out) >= max_examples:

@@ -1,4 +1,6 @@
-from neutrorag.fever import LABEL_TO_CHANNEL, _examples_from_rows
+from neutrorag.fever import (
+    GOLD_EVIDENCE_RELEVANCE, LABEL_TO_CHANNEL, _examples_from_rows,
+)
 
 # Tiny inline fixture shaped like a `copenlu/fever_gold_evidence` row:
 # claim, label, evidence=[[wikipedia_page, sentence_id, sentence_text], ...].
@@ -34,7 +36,10 @@ def test_examples_from_rows_builds_evidence_and_gold_channel():
     assert supports.gold_channel == "T"
     assert len(supports.evidence) == 1
     assert supports.evidence[0].text == "The sky appears blue due to Rayleigh scattering."
-    assert supports.evidence[0].relevance == 0.9
+    # Gold evidence is annotator-selected, not retrieved: relevance is a stated
+    # assumption, not a measurement. Assert against the named constant so the
+    # test tracks the documented choice instead of re-pinning a magic number.
+    assert supports.evidence[0].relevance == GOLD_EVIDENCE_RELEVANCE
 
     assert refutes.gold_channel == "F"
     assert refutes.evidence[0].text == "Cats are mammals, not reptiles."
