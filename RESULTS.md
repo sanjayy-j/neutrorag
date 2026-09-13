@@ -19,10 +19,73 @@ this file, it does not go in the report.
 | | |
 |---|---|
 | **Gate A** | **FAILED** — the raw NLI baseline scores higher than NeutroRAG |
-| **Gate B** (definition of `r`) | not signed off; no work downstream of it has been done |
+| **Gate B** (definition of `r`) | signed off (route (i)); `r` implemented and wired. **Its stated prediction is falsified** — see below |
 | **Gate C** (expansion loop not a no-op) | test written and **passing** — see below |
 
+> **Blocked:** the r-ablation, the F12 sensitivity sweep and the repeated Gate A
+> were **not** run. The Gate B prediction test is a stop-gate and it did not pass.
+
 ---
+
+## Gate B: `r` implemented, and its prediction falsified
+
+### What was implemented
+
+`neutrorag/sufficiency.py` computes `r` from four retrieval-side components
+(coverage, support_count, connectivity, diversity), equal-weighted, with no
+dependence on `e`, `n` or `c` — enforced structurally and asserted by
+`tests/test_sufficiency.py`. `scoring.py` now calls it in place of
+`max(relevance)`; `fever.py`'s hardcoded `0.9` is now the named, documented
+constant `GOLD_EVIDENCE_RELEVANCE = 1.0`.
+
+**`r` now carries information** where it previously could not: 0.167 / 0.667 /
+0.833 across the existing test scenarios, and **0.292 – 0.969** on the pipeline
+corpus with all four components live, versus a former constant 0.9. Memo **F1 is
+addressed**.
+
+### The prediction test — FALSIFIED
+
+The Gate B proposal committed in advance to: *"The mass identity breaks … once
+`r` carries retrieval information orthogonal to the NLI simplex, the sum is no
+longer a function of `disagree` alone."*
+
+```bash
+python experiments/check_mass_identity.py
+```
+
+| check | max \|deviation\| |
+|---|---:|
+| random draws, `r ~ Uniform(0,1)` | 4.441e-16 |
+| random draws, `r` computed by `sufficiency` | 4.441e-16 |
+| real run: pipeline corpus + graph, all four components live (`r` = 0.292–0.969) | 2.220e-16 |
+| real run: 200 FEVER claims, replaying the Gate A NLI outputs | 2.220e-16 |
+
+**The identity still holds, to machine precision. `T + I + F = 1 + λ·disagree`
+is unchanged.**
+
+### Why — it is algebraic, not empirical
+
+The cancellation never depended on `r` being uninformative:
+
+```
+T + I + F = r·e + (1 − r + r·n) + (r·c + λ·disagree)
+          = r·(e + n + c) + (1 − r) + λ·disagree
+          = r + 1 − r + λ·disagree            [since e + n + c = 1]
+          = 1 + λ·disagree
+```
+
+`r` multiplies the *whole* NLI simplex across the three channels and then cancels
+against `I`'s `(1 − r)` term — **for any `r`, from any source**. Verified directly:
+holding `e,n,c` fixed and sweeping `r` over 0.0, 0.137, 0.5, 0.9, 1.0 gives
+`T+I+F = 1.250000000000` at every value.
+
+So redefining `r` cannot break the identity **while the three formulas are
+unchanged**. Note what the memo's F5 route (i) actually said: *"break the identity
+by **deriving I** from a retrieval-sufficiency signal"* — that is a change to `I`'s
+**formula**, which this session was explicitly scoped not to touch. Route (i) is
+not refuted; it was scoped in a way that made it unreachable. Breaking the identity
+requires an `I` whose `r`-dependence does not exactly cancel `r·(e+n+c)` — a new
+framing decision needing sign-off.
 
 ## RETRACTED
 
@@ -94,6 +157,12 @@ gold, predicted, evidence_count).
 | rows where predictions differ | 4 / 200 | |
 | McNemar (exact) | b=1, c=3, p=0.625 | not significant |
 | `N_empty` (memo F3) | **0 / 200** | the leak is live code but fired zero times here |
+
+> **`fever_run_200.csv` is now partly stale.** Its `claim`, `e`, `n`, `c`, `gold_*`
+> and `evidence_count` columns remain valid (the NLI calls are unchanged), but its
+> `r`, `T`, `I` and `F` columns were computed with the old constant `r = 0.9`.
+> Regenerating it would produce a new headline number, which is downstream of the
+> blocked stop-gate, so it has deliberately **not** been re-run.
 | distinct values of `r` (memo F1) | `{0.9}` | `r` is a constant, not a signal |
 | `disagree` (memo F9) | median 0.011, mean 0.027, max 0.717; 9/200 rows > 0.1 | conflict term near-inert on FEVER |
 | evidence passages per row | 185 rows have exactly 1 | so `2·min(e,c)` measures single-passage ambiguity, not cross-source conflict |
