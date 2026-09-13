@@ -1,0 +1,22 @@
+system,class,precision,recall,f1,support
+(a) r = 0.9 constant,T,0.8913,0.6308,0.7387,65
+(a) r = 0.9 constant,I,0.6047,0.7761,0.6797,67
+(a) r = 0.9 constant,F,0.8529,0.8529,0.8529,68
+(b) r = sufficiency,T,1.0000,0.2462,0.3951,65
+(b) r = sufficiency,I,0.3801,0.9701,0.5462,67
+(b) r = sufficiency,F,0.8462,0.1618,0.2716,68
+"raw NLI argmax(e,n,c) [reference]",T,0.8936,0.6462,0.7500,65
+"raw NLI argmax(e,n,c) [reference]",I,0.6071,0.7612,0.6755,67
+"raw NLI argmax(e,n,c) [reference]",F,0.8406,0.8529,0.8467,68
+
+system,metric,value
+(a) r = 0.9 constant,accuracy,0.7550
+(a) r = 0.9 constant,macro_f1,0.7571
+(b) r = sufficiency,accuracy,0.4600
+(b) r = sufficiency,macro_f1,0.4043
+"raw NLI argmax(e,n,c) [reference]",accuracy,0.7550
+"raw NLI argmax(e,n,c) [reference]",macro_f1,0.7574
+paired(b_vs_a),mcnemar_b,13
+paired(b_vs_a),mcnemar_c,72
+paired(b_vs_a),mcnemar_exact_p,0.0000
+paired(b_vs_a),rows_differ,85
