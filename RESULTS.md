@@ -19,73 +19,112 @@ this file, it does not go in the report.
 | | |
 |---|---|
 | **Gate A** | **FAILED** — the raw NLI baseline scores higher than NeutroRAG |
-| **Gate B** (definition of `r`) | signed off (route (i)); `r` implemented and wired. **Its stated prediction is falsified** — see below |
+| **Gate B** (definition of `r`) | signed off, revised; `r` implemented AND `I = max(1-r, n)`. **Prediction confirmed — the mass identity is broken** |
 | **Gate C** (expansion loop not a no-op) | test written and **passing** — see below |
 
-> **Blocked:** the r-ablation, the F12 sensitivity sweep and the repeated Gate A
-> were **not** run. The Gate B prediction test is a stop-gate and it did not pass.
+> **Still open:** the repeated Gate A on Step 9 data. The r-ablation and the F12
+> sweep have now run — see below; both are heavily confounded by memo F9.
 
 ---
 
-## Gate B: `r` implemented, and its prediction falsified
+## Gate B (revised): `I = max(1-r, n)` — the mass identity is broken
 
-### What was implemented
+### The change
 
-`neutrorag/sufficiency.py` computes `r` from four retrieval-side components
-(coverage, support_count, connectivity, diversity), equal-weighted, with no
-dependence on `e`, `n` or `c` — enforced structurally and asserted by
-`tests/test_sufficiency.py`. `scoring.py` now calls it in place of
-`max(relevance)`; `fever.py`'s hardcoded `0.9` is now the named, documented
-constant `GOLD_EVIDENCE_RELEVANCE = 1.0`.
+`scoring.py:229`: `I = clamp(1.0 - r + r * n)` becomes `I = clamp(max(1.0 - r, n))`.
+`T`, `F`, `lambda` and `disagree` are byte-identical; `policy.py` untouched.
+Indeterminacy is now the **worse** of two independent doubts — thin retrieval
+(`1-r`) or on-topic but uninformative evidence (`n`) — rather than a
+multiplicative blend of them.
 
-**`r` now carries information** where it previously could not: 0.167 / 0.667 /
-0.833 across the existing test scenarios, and **0.292 – 0.969** on the pipeline
-corpus with all four components live, versus a former constant 0.9. Memo **F1 is
-addressed**.
+The first Gate B attempt (redefining `r` alone) could not have worked, and this
+is why: `r` multiplied the whole NLI simplex across the three channels and then
+cancelled against `I`'s `(1-r)` term, giving `T+I+F = 1 + λ·disagree` for **any**
+`r`. Breaking it required changing `I`, which memo F5 route (i) actually asked
+for ("break the identity by *deriving I* from a retrieval-sufficiency signal").
 
-### The prediction test — FALSIFIED
-
-The Gate B proposal committed in advance to: *"The mass identity breaks … once
-`r` carries retrieval information orthogonal to the NLI simplex, the sum is no
-longer a function of `disagree` alone."*
+### The prediction test — CONFIRMED
 
 ```bash
 python experiments/check_mass_identity.py
 ```
 
-| check | max \|deviation\| |
-|---|---:|
-| random draws, `r ~ Uniform(0,1)` | 4.441e-16 |
-| random draws, `r` computed by `sufficiency` | 4.441e-16 |
-| real run: pipeline corpus + graph, all four components live (`r` = 0.292–0.969) | 2.220e-16 |
-| real run: 200 FEVER claims, replaying the Gate A NLI outputs | 2.220e-16 |
+| check | max \|deviation\| | before |
+|---|---:|---:|
+| random draws, `r ~ Uniform(0,1)` | **2.497e-01** | 4.441e-16 |
+| random draws, `r` computed by `sufficiency` | **2.467e-01** | 4.441e-16 |
+| real run: pipeline corpus + graph | **1.364e-01** | 2.220e-16 |
+| real run: 200 FEVER claims | **2.482e-01** | 2.220e-16 |
 
-**The identity still holds, to machine precision. `T + I + F = 1 + λ·disagree`
-is unchanged.**
+This matches the analytic bound exactly. Deviation is `-r·n` when `1-r > n` and
+`-(1-n)(1-r)` otherwise; both are maximised at `n = 1-r`, where each equals
+`r(1-r)` — i.e. **0.25 at r = 0.5**.
 
-### Why — it is algebraic, not empirical
+### The mass now carries independent information
 
-The cancellation never depended on `r` being uninformative:
+| corpus | min | median | max | mass > 1 | mass < 1 |
+|---|---:|---:|---:|---:|---:|
+| pipeline (4 claims) | 0.958 | 1.059 | 1.368 | 75% | 25% |
+| FEVER (200 claims) | 0.765 | 0.986 | 1.255 | 11.5% | 88.5% |
 
+Under the old `I`, **all 200** FEVER rows had mass > 1, because "mass > 1" was
+identically "disagree > 0". Under the new `I`, 23/200 do, and the two criteria
+**disagree on 88.5% of rows**. The mass can now also fall *below* 1, which it
+previously never could.
+
+## The r-ablation — computed `r` is much worse, on FEVER
+
+```bash
+python experiments/run_r_ablation.py    # -> results/r_ablation.{md,csv}
 ```
-T + I + F = r·e + (1 − r + r·n) + (r·c + λ·disagree)
-          = r·(e + n + c) + (1 − r) + λ·disagree
-          = r + 1 − r + λ·disagree            [since e + n + c = 1]
-          = 1 + λ·disagree
+
+Same data, same replayed NLI outputs, `I` held at `max(1-r, n)`; only `r` varies.
+
+| condition | accuracy | macro-F1 |
+|---|---:|---:|
+| (a) `r = 0.9` constant | 0.7550 | 0.7571 |
+| (b) `r = sufficiency` | **0.4600** | 0.4043 |
+| raw `argmax(e,n,c)` [reference] | 0.7550 | 0.7574 |
+
+**(b) − (a) = −0.2950.** Differ on 85/200 rows; exact McNemar b=13, c=72,
+**p = 0.0000**. Large and highly significant.
+
+**This measures memo F9, not the sufficiency design.** FEVER gives one gold
+passage per claim: 185/200 rows carry exactly one, so with `support_target = 3`
+the `support_count` component is pinned at 1/3, and with no graph and no
+provenance `connectivity` and `diversity` are unavailable. `r` is therefore
+bounded above by `(coverage + 0.333)/2 ≤ 0.667` on those rows **structurally**.
+Median `r` = 0.417; 143/200 rows land at `r ≤ 0.5`, where `I = max(1-r, n) ≥ 0.5`
+by construction. Condition (b) consequently predicts I nearly everywhere
+(I-recall 0.970; F-recall collapses 0.853 → 0.162). No parameter was retuned.
+
+## Sensitivity sweep (memo F12)
+
+```bash
+python experiments/run_sensitivity_sweep.py   # -> results/sensitivity_sweep.{csv,png}
 ```
 
-`r` multiplies the *whole* NLI simplex across the three channels and then cancels
-against `I`'s `(1 − r)` term — **for any `r`, from any source**. Verified directly:
-holding `e,n,c` fixed and sweeping `r` over 0.0, 0.137, 0.5, 0.9, 1.0 gives
-`T+I+F = 1.250000000000` at every value.
+**The F12 boundary did not move.** `I = max(1-r, n) ≥ 1-r` and `T = r·e ≤ r`, so
+for `r < 0.5`, `I ≥ 1-r > r ≥ T` — I beats T unconditionally. The old
+`I = (1-r) + r·n` also satisfies `I ≥ 1-r`, so the regime begins at `r = 0.5`
+under **both** formulas. Empirically the cliff is sharp:
 
-So redefining `r` cannot break the identity **while the three formulas are
-unchanged**. Note what the memo's F5 route (i) actually said: *"break the identity
-by **deriving I** from a retrieval-sufficiency signal"* — that is a change to `I`'s
-**formula**, which this session was explicitly scoped not to touch. Route (i) is
-not refuted; it was scoped in a way that made it unreachable. Breaking the identity
-requires an `I` whose `r`-dependence does not exactly cancel `r·(e+n+c)` — a new
-framing decision needing sign-off.
+| r | predicted I | action = EXPAND | attribution accuracy |
+|---:|---:|---:|---:|
+| 0.50 | 97.5% | 72.5% | 0.350 |
+| 0.52 | 62.5% | 40.0% | 0.680 |
+| 1.00 | 41.0% | 37.0% | 0.765 |
+
+I is the argmax for *every* claim at any `r ≤ 0.42`. FEVER's median `r` of 0.417
+puts the whole corpus inside that regime.
+
+Other sweep observations, none acted on: accuracy is highest at `r = 1.0`
+(0.765) — `r` contributes nothing positive on FEVER, and the small edge over raw
+`argmax(e,n,c)` (0.755) comes from `λ·disagree` in F. `lambda` is nearly flat for
+attribution (0.455–0.470 over 0–2) but monotonically raises the
+SURFACE_CONTRADICTION rate. `connectivity` and `diversity` weights are inert on
+FEVER; at weight 1.0 for either, every *available* component has zero weight and
+`r` falls to 0.
 
 ## RETRACTED
 
@@ -127,11 +166,15 @@ Arithmetic, not an experiment (memo F4). Two independent problems:
 
 ### 3. "T + I + F can exceed 1, demonstrating independence" — RETRACTED as stated
 
-`T + I + F = 1 + λ·disagree`, **identically** (memo F5, Appendix A). Verified on the
-real run: max deviation over 200 rows = **2.22e-16**. The triple carries one degree
-of freedom beyond the probability simplex, not three; "mass exceeds 1" is a
-restatement of "disagree > 0". Rewriting this claim is a **Gate B** decision and has
-not been made.
+**Status: fixed as of Gate B (revised), but the retraction stands for the numbers
+already reported.** Under the `I = (1-r) + r·n` used for every number in the First
+Review report, `T + I + F = 1 + λ·disagree` identically (max deviation 2.22e-16
+over the 200 rows), so the triple carried one degree of freedom beyond the
+probability simplex, not three, and "mass exceeds 1" merely restated
+"disagree > 0". Under the current `I = max(1-r, n)` the identity is broken
+(deviation up to 0.25) and the mass does carry independent information — see the
+Gate B section above. Any *reported* number predating that change must still be
+described using the old semantics.
 
 ---
 
