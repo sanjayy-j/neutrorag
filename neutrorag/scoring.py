@@ -9,11 +9,30 @@ Construction (see README for the derivation):
 
     T = r * e                       # support requires on-topic evidence that entails
     F = r * c + lambda * disagree   # contradiction from conflict + source disagreement
-    I = 1 - r + r * n               # structural (no evidence) + semantic (neutral) doubt
+    I = max(1 - r, n)               # the WORSE of thin retrieval and neutral evidence
 
-Because ``disagree`` enters F independently, T + I + F can exceed 1 whenever some
-sources support and others contradict -- exactly the case a summed-to-one
-(fuzzy/probabilistic) score cannot express.
+Indeterminacy has two independent causes: retrieval was thin (``1 - r``), or what
+was retrieved is on-topic but uninformative (``n``). ``I`` takes the worse of the
+two, so a claim is indeterminate if *either* holds.
+
+Why not ``I = (1 - r) + r * n`` (the form used until Gate B)? Because it blends the
+two multiplicatively, and that blending is exactly what made the mass identity
+structural: ``r`` multiplied the whole NLI simplex across the three channels and
+then cancelled against ``I``'s ``(1 - r)`` term, giving
+
+    T + I + F = r*(e + n + c) + (1 - r) + lambda*disagree = 1 + lambda*disagree
+
+for ANY r, however the retrieval signal was derived (memo F5). Under ``max`` the
+cancellation does not occur, so the mass carries information beyond ``disagree``.
+
+Note that ``I = 1 - r * (1 - n)`` is NOT an alternative: it expands to
+``1 - r + r * n``, i.e. the old form.
+
+``max`` was chosen over the additive ``(1 - r) + n``, which also breaks the
+identity and behaves near-identically on realistic inputs, because ``max`` stays
+in [0, 1] without clamping. The additive form reaches 1.8 before clamping when
+retrieval is thin AND evidence is neutral, so the clamp would bind precisely
+where I should be most informative.
 """
 from __future__ import annotations
 
@@ -207,5 +226,5 @@ class NLIRetrievalScorer:
 
         T = clamp(r * e)
         F = clamp(r * c + self.lam * disagree)
-        I = clamp(1.0 - r + r * n)
+        I = clamp(max(1.0 - r, n))
         return TIF(T=T, I=I, F=F)

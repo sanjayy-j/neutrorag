@@ -46,6 +46,19 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+class _ReplayNLI:
+    """Replays recorded (e, n, c) values in order -- no model, identical numbers."""
+
+    def __init__(self, rows):
+        self._rows = list(rows)
+        self._i = 0
+
+    def predict(self, premise, hypothesis):
+        out = self._rows[self._i]
+        self._i += 1
+        return out
+
+
 def deviation(T: float, I: float, F: float, e: float, c: float, lam: float = LAM) -> float:
     """|(T + I + F) - (1 + lambda*disagree)|."""
     disagree = clamp(2.0 * min(e, c))
@@ -53,15 +66,46 @@ def deviation(T: float, I: float, F: float, e: float, c: float, lam: float = LAM
 
 
 def channels(r: float, e: float, n: float, c: float, lam: float = LAM):
-    """The frozen formulas from scoring.py, applied to given r and e/n/c."""
-    disagree = clamp(2.0 * min(e, c))
-    return clamp(r * e), clamp(1.0 - r + r * n), clamp(r * c + lam * disagree)
+    """Apply the REAL scorer to a given r and e/n/c.
+
+    This previously held a hand-copied duplicate of the three channel formulas.
+    That was a latent trap and it sprang: when I was changed to max(1-r, n) the
+    duplicate kept the old form, so the random-draw checks reported the identity
+    still holding (4.4e-16) while the real runs -- which go through
+    NLIRetrievalScorer.score -- correctly reported it broken. A check that can
+    disagree with the code it is checking is worse than no check.
+
+    Now routed through the real scorer: one passage, r pinned via r_override, and
+    the NLI output replayed. With a single passage the relevance-weighted means
+    reduce to exactly (e, n, c), so this is the production formula, not a copy.
+    """
+    scorer = NLIRetrievalScorer(nli=_ReplayNLI([(e, n, c)]), lam=lam, r_override=r)
+    tif = scorer.score("claim", [Evidence("passage", 1.0)])
+    return tif.T, tif.I, tif.F
 
 
 def random_simplex(rng: random.Random):
     a, b, c_ = rng.random(), rng.random(), rng.random()
     total = a + b + c_ or 1.0
     return a / total, b / total, c_ / total
+
+
+def _report_masses(masses, label: str) -> None:
+    """Distribution of T+I+F. Under the old I this was 1 + lam*disagree exactly,
+    so 'mass > 1' merely restated 'disagree > 0' (memo F5). If the mass now
+    carries independent information, this distribution should be non-degenerate
+    and should straddle 1 in both directions."""
+    if not masses:
+        return
+    srt = sorted(masses)
+    n = len(srt)
+    above = sum(1 for m in masses if m > 1.0 + 1e-12)
+    below = sum(1 for m in masses if m < 1.0 - 1e-12)
+    print(f"    mass T+I+F over {label}: min={srt[0]:.3f} median={srt[n // 2]:.3f} "
+          f"max={srt[-1]:.3f}")
+    print(f"      exceeds 1: {above}/{n} ({above / n:.1%})   "
+          f"below 1: {below}/{n} ({below / n:.1%})   "
+          f"exactly 1: {n - above - below}/{n}")
 
 
 def check_random_uniform_r(draws: int, rng: random.Random) -> float:
@@ -97,19 +141,6 @@ def check_random_computed_r(draws: int, rng: random.Random) -> float:
     return worst
 
 
-class _ReplayNLI:
-    """Replays recorded (e, n, c) values in order -- no model, identical numbers."""
-
-    def __init__(self, rows):
-        self._rows = list(rows)
-        self._i = 0
-
-    def predict(self, premise, hypothesis):
-        out = self._rows[self._i]
-        self._i += 1
-        return out
-
-
 def check_real_run_fever(csv_path: Path) -> float:
     """Real run: the 200 FEVER claims, replaying the Gate A NLI outputs."""
     from neutrorag.fever import load_fever_hf
@@ -118,6 +149,7 @@ def check_real_run_fever(csv_path: Path) -> float:
     examples = load_fever_hf(split="validation", max_examples=len(rows))
 
     worst = 0.0
+    masses = []
     for ex, row in zip(examples, rows):
         if row["e"] == "":
             continue  # empty-evidence short circuit; no NLI call was made
@@ -125,6 +157,8 @@ def check_real_run_fever(csv_path: Path) -> float:
         scorer = NLIRetrievalScorer(nli=_ReplayNLI([(e, n, c)] * len(ex.evidence)))
         tif = scorer.score(ex.claim, ex.evidence)
         worst = max(worst, deviation(tif.T, tif.I, tif.F, e, c))
+        masses.append(tif.mass)
+    _report_masses(masses, "FEVER 200")
     return worst
 
 
@@ -166,6 +200,7 @@ def check_real_run_pipeline() -> float:
     ]
 
     worst = 0.0
+    masses = []
     print("\n    per-claim r (all four components live):")
     for claim, evidence in zip(claims, corpora):
         breakdown = scorer.sufficiency(claim, evidence)
@@ -178,8 +213,10 @@ def check_real_run_pipeline() -> float:
         c = sum(w * p[2] for w, p in zip(weights, preds)) / wsum
         dev = deviation(tif.T, tif.I, tif.F, e, c)
         worst = max(worst, dev)
+        masses.append(tif.mass)
         comps = " ".join(f"{k}={v:.2f}" for k, v in breakdown.components.items())
-        print(f"      r={breakdown.r:.3f}  [{comps}]  {tif}  dev={dev:.2e}")
+        print(f"      r={breakdown.r:.3f}  [{comps}]  {tif}  mass={tif.mass:.3f}  dev={dev:.2e}")
+    _report_masses(masses, "pipeline corpus")
     return worst
 
 
