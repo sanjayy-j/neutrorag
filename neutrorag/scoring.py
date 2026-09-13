@@ -5,11 +5,33 @@ Construction (see README for the derivation):
     r      = retrieval sufficiency in [0, 1]  (did we retrieve anything on-topic)
     e,n,c  = relevance-weighted mean NLI entailment / neutral / contradiction
              over the retrieved passages (each in [0, 1], e+n+c approx 1)
-    disagree = 2 * min(e, c)                 (cross-source conflict signal)
+    disagree = 2 * max over pairs (i, j) of min(e_i, c_j)   (conflict signal)
 
     T = r * e                       # support requires on-topic evidence that entails
     F = r * c + lambda * disagree   # contradiction from conflict + source disagreement
     I = max(1 - r, n)               # the WORSE of thin retrieval and neutral evidence
+
+**Why ``disagree`` is pairwise (memo F6).** It was ``2 * min(e, c)`` on the
+*pooled* means, so adding neutral passages diluted it monotonically even though
+the conflict between the two opposed passages had not changed at all: the memo's
+own filler test decayed F = 1.000 -> 0.752 -> 0.631 -> 0.545 -> 0.499 as neutral
+passages were added one at a time. Conflict is a property of the *set*, and a
+mean cannot recover it from its marginals. It is now the strongest opposition
+between any entailing passage i and any contradicting passage j.
+
+Two consequences of keeping the existing factor of 2 rather than rescaling, both
+deliberate and both worth revisiting separately from this change:
+
+* With one passage the only pair is (i, i) and the expression reduces EXACTLY to
+  the old ``2 * min(e, c)``. That is why single-passage corpora such as FEVER are
+  unaffected -- which is the point: the reformulation should change behaviour only
+  where there are actually pairs to compare.
+* For a genuinely opposed pair, ``min(e_i, c_j)`` can reach 1.0 unconstrained by
+  the simplex, so the doubled value saturates at the clamp once the best pair
+  reaches 0.5. Conflict strength above that point is no longer resolved, and a
+  single maximally ambiguous passage (e = c = 0.5) still scores as high as two
+  flatly opposed sources. Rescaling to fix either would be a change of scale, not
+  the reformulation the memo asked for, so it is left for a separate decision.
 
 Indeterminacy has two independent causes: retrieval was thin (``1 - r``), or what
 was retrieved is on-topic but uninformative (``n``). ``I`` takes the worse of the
@@ -222,7 +244,11 @@ class NLIRetrievalScorer:
         c = sum(w * x for w, x in zip(weights, con)) / wsum
 
         r = clamp(self.sufficiency(claim, evidence).r)  # retrieval sufficiency
-        disagree = clamp(2.0 * min(e, c))  # high only if BOTH support & conflict present
+        # Pairwise conflict (memo F6): the strongest opposition between ANY
+        # passage that entails and ANY passage that contradicts. Computed on
+        # the per-passage outputs, not the pooled means, because conflict is a
+        # set-level property -- see the module docstring.
+        disagree = clamp(2.0 * max(min(e_i, c_j) for e_i in ent for c_j in con))
 
         T = clamp(r * e)
         F = clamp(r * c + self.lam * disagree)
