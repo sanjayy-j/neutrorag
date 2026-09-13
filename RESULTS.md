@@ -157,16 +157,16 @@ gold, predicted, evidence_count).
 | rows where predictions differ | 4 / 200 | |
 | McNemar (exact) | b=1, c=3, p=0.625 | not significant |
 | `N_empty` (memo F3) | **0 / 200** | the leak is live code but fired zero times here |
+| distinct values of `r` (memo F1) | `{0.9}` | `r` is a constant, not a signal |
+| `disagree` (memo F9) | median 0.011, mean 0.027, max 0.717; 9/200 rows > 0.1 | conflict term near-inert on FEVER |
+| evidence passages per row | 185 rows have exactly 1 | so `2·min(e,c)` measures single-passage ambiguity, not cross-source conflict |
+| mass identity deviation (memo F5) | 2.22e-16 | holds to machine precision |
 
 > **`fever_run_200.csv` is now partly stale.** Its `claim`, `e`, `n`, `c`, `gold_*`
 > and `evidence_count` columns remain valid (the NLI calls are unchanged), but its
 > `r`, `T`, `I` and `F` columns were computed with the old constant `r = 0.9`.
 > Regenerating it would produce a new headline number, which is downstream of the
 > blocked stop-gate, so it has deliberately **not** been re-run.
-| distinct values of `r` (memo F1) | `{0.9}` | `r` is a constant, not a signal |
-| `disagree` (memo F9) | median 0.011, mean 0.027, max 0.717; 9/200 rows > 0.1 | conflict term near-inert on FEVER |
-| evidence passages per row | 185 rows have exactly 1 | so `2·min(e,c)` measures single-passage ambiguity, not cross-source conflict |
-| mass identity deviation (memo F5) | 2.22e-16 | holds to machine precision |
 
 ### Contamination check (memo F10)
 
