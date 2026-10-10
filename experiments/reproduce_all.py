@@ -246,6 +246,14 @@ def model_dependent(with_models: bool) -> None:
          "python experiments/run_pipeline_demo.py --nli real"),
         ("contamination check (downloads pietrolesci/nli_fever)",
          "python experiments/check_contamination.py"),
+        ("saturation targets from depth alone (no accuracy; Decision 2)",
+         "python experiments/derive_targets.py"),
+        ("pairwise-mode sanity gate, real NLI (Decision 1)",
+         "python experiments/check_pairwise_sanity.py --nli real"),
+        ("CONFLICTS pairwise cache (~2.5h) then the policy test",
+         "python experiments/score_conflicts_pairwise.py"),
+        ("the policy test itself",
+         "python experiments/run_conflicts_pairwise_eval.py"),
     ]
     if not with_models:
         print("\n  skipped (pass --with-models to run these):")

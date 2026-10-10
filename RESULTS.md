@@ -20,6 +20,8 @@ this file, it does not go in the report.
 |---|---|
 | **Gate A** | **FAILED** — the raw NLI baseline scores higher than NeutroRAG |
 | **Gate B** (definition of `r`) | signed off, revised; `r` implemented AND `I = max(1-r, n)`. **Prediction confirmed — the mass identity is broken** |
+| **Decision 1** (pairwise mode) | implemented; **sanity gate passed** on real NLI |
+| **Decision 2** (saturation targets) | re-derived from depth alone and committed before any accuracy run (`4df956b`) |
 | **Gate C** (expansion loop not a no-op) | test written and **passing** — see below |
 
 > **Step 6 landed** (pairwise `disagree`), and **Step 9 (CONFLICTS) ran and was
@@ -205,6 +207,79 @@ below 0.5. FEVER pinned `r` low (median 0.417, 143/200 below 0.5); CONFLICTS
 pins it high. **Neither venue exercises `r` across its range**, which is a
 property of the components' targets, not of either dataset. Reported, not
 retuned.
+
+## Decision 2: saturation targets, derived from depth alone
+
+```bash
+python experiments/derive_targets.py     # reads depth only; prints no accuracy
+```
+
+**No fixed target can work, and on FEVER none works at all.** FEVER's passage
+count is a point mass — p25 = median = p75 = p90 = **1**, with 92.5% of
+instances at k=1 — so a saturating function of k cannot manufacture variance the
+input does not contain. CONFLICTS is concentrated at 8–10, and at the old target
+of 3 both count components were **100% saturated, std exactly 0.000**. The two
+requirements are mutually exclusive.
+
+The real defect in `target=3` was **bias, not lost discrimination**: FEVER's
+`support_count` sat at the constant 0.333 and subtracted from `r` on every
+instance, which is what put 143/200 below the F12 cliff.
+
+**Rule adopted: target = p75 of that corpus's own depth distribution.** Not max
+(outlier-driven), not median (saturates half the corpus by construction), and
+explicitly *not* the spread-maximising value — that is still fitting, even to
+depth. `fever.SUPPORT_TARGET = 1`, `conflicts.SUPPORT_TARGET = 10`,
+`conflicts.DIVERSITY_TARGET = 9`, module fallback 1 (unbiased).
+
+| prediction, committed in `4df956b` before any run | outcome |
+|---|---|
+| FEVER r median 0.417 → **0.750** | **0.750** ✓ |
+| FEVER instances at r ≤ 0.5: 143/200 → **17/200** | **17/200** ✓ |
+| CONFLICTS r median 1.000 → **0.930**, pstdev 0.0297 → **0.0856** | **0.930 / 0.0856** ✓ |
+
+## Decision 1: pairwise mode, and its sanity gate
+
+```bash
+python experiments/check_pairwise_sanity.py --nli real
+```
+
+`T` is **corroboration** in this mode — mutual agreement between sources, never
+"support for the claim". The query is used only for retrieval sufficiency and is
+never passed to the NLI model as a hypothesis (asserted structurally by
+`test_query_is_never_passed_to_the_nli_model`).
+
+| case | corroboration | contradiction | neutrality | dominant | expected |
+|---|---:|---:|---:|---|---|
+| contradicting | 0.000 | **1.000** | 0.001 | F | F ✓ |
+| agreeing | **0.997** | 0.001 | 0.003 | T | T ✓ |
+| unrelated | 0.007 | 0.002 | **0.984** | I | I ✓ |
+
+Against claim mode's **median contradiction of 0.017** on this corpus. The gate
+costs a minute and runs before any experiment, because the previous venue
+attempt spent 107 minutes before its framing error surfaced.
+
+**A bug this caught, in my own code:** `pairwise_breakdown` first computed
+sufficiency on the *capped* passage set, so every CONFLICTS instance showed
+exactly `max_passages=5` and `support_count` re-saturated at a constant 0.5 —
+reintroducing the exact defect Decision 2 removes. `r` now uses the full
+retrieved set; the cap is a compute budget on the O(k²) comparison only.
+
+## FEVER regression under the new targets
+
+```bash
+python experiments/run_r_ablation.py     # replays fever_run_200.csv; model not re-run
+```
+
+| condition | accuracy | macro-F1 |
+|---|---:|---:|
+| (a) `r = 0.9` constant | 0.7550 | 0.7571 |
+| (b) `r = sufficiency` | **0.6650** | 0.6730 |
+| raw `argmax(e,n,c)` | 0.7550 | 0.7574 |
+
+**(b) − (a) = −0.0900**, improved from −0.2950 under the old targets but **still
+negative and significant**: McNemar b=0, c=18, p=0.0000. Computed `r` does not
+win a single row that it loses. `r` now spans 26 distinct values, median 0.750.
+Reported, not tuned.
 
 ## RETRACTED
 
