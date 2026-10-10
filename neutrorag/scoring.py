@@ -168,6 +168,13 @@ class HFNLIBackend:
         return (e / s, n / s, c / s)
 
 
+# Default cap on passages compared in pairwise mode. Cost is k(k-1) NLI calls,
+# and at 4.48s/call measured on CPU an uncapped k=9 instance costs 323s. Five is
+# also a realistic RAG top-k, and it bounds the upward drift of the
+# max-over-pairs statistics with k.
+DEFAULT_MAX_PASSAGES = 5
+
+
 # ---------------------------------------------------------------------------
 # Evidence + scorer
 # ---------------------------------------------------------------------------
@@ -184,6 +191,28 @@ class Evidence:
     text: str
     relevance: float = 1.0
     source: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class PairwiseBreakdown:
+    """Pairwise-mode channels plus their inputs, for instrumentation.
+
+    ``corroboration`` is named for what it is. It is NOT support for a claim.
+    """
+
+    tif: TIF
+    r: float
+    corroboration: float
+    contradiction: float
+    neutrality: float
+    n_passages: int
+    n_pairs: int
+
+    def as_row(self) -> dict:
+        return {"r": self.r, "corroboration": self.corroboration,
+                "contradiction": self.contradiction, "neutrality": self.neutrality,
+                "T_corroboration": self.tif.T, "I": self.tif.I, "F": self.tif.F,
+                "n_passages": self.n_passages, "n_pairs": self.n_pairs}
 
 
 @dataclass
@@ -231,6 +260,99 @@ class NLIRetrievalScorer:
             support_target=self.support_target,
             diversity_target=self.diversity_target,
         )
+
+    # -- pairwise mode (Decision 1) ----------------------------------------
+    def pairwise_breakdown(self, query: str, evidence: Sequence[Evidence],
+                           max_passages: int = DEFAULT_MAX_PASSAGES) -> "PairwiseBreakdown":
+        """Score the evidence set by comparing passages AGAINST EACH OTHER.
+
+        Claim mode asks "does passage i entail the claim?" and infers conflict
+        from the combination of per-passage answers. That is conflict measured
+        by proxy, through marginals -- the thing memo F6 warns about -- and it
+        is unusable where no claim exists, which is ~48% of CONFLICTS. Pairwise
+        mode drops the detour: the thesis is about INTER-SOURCE conflict, which
+        is a relation between passages, so it is measured as one.
+
+        ``query`` is used ONLY for retrieval sufficiency (coverage, graph
+        connectivity). It is never passed to the NLI model as a hypothesis --
+        that is precisely the ill-posed call this mode exists to avoid.
+
+        CHANNEL SEMANTICS UNDER THIS MODE:
+          T = CORROBORATION      mutual agreement between sources.
+                                 NOT "support for the claim" -- a different
+                                 quantity, which this mode does not measure and
+                                 must not be reported as.
+          F = inter-source contradiction
+          I = retrieval insufficiency
+
+        AGGREGATION, and what was rejected:
+          corroboration = max over unordered pairs of min(e_ij, e_ji)
+            Both directions must entail, so it registers genuine mutual
+            agreement. REJECTED max(e_ij) one-directional: entailment is
+            directional, and a specific passage entails a general one by being
+            more specific, which is not agreement between sources. REJECTED the
+            mean over pairs: it dilutes exactly as F6 describes. REJECTED
+            "fraction of pairs above a threshold": a new free parameter with no
+            principled value, and the sweep would have to invent one.
+          contradiction = max over ordered pairs of c_ij
+            Mirrors the Step 6 form: the strongest opposition present anywhere in
+            the set. Unordered would also work since contradiction is close to
+            symmetric, but the ordered pass is already paid for by
+            corroboration's need for both directions.
+          neutrality = mean over ordered pairs of n_ij
+            CONFOUND, stated: pairwise neutrality means the sources neither agree
+            nor conflict, which also describes genuinely COMPLEMENTARY sources
+            covering different aspects. On CONFLICTS that is an annotated class
+            of its own, so I cannot separate "retrieval was thin" from "sources
+            are complementary" here. Reported, not papered over.
+          No lambda*disagree term. In claim mode that term exists to recover a
+            set-level property from marginals; here the set-level property is
+            measured directly, so adding it would double-count the same signal.
+
+        KNOWN WEAKNESS: both T and F are max-over-pairs, i.e. extreme-value
+        statistics over k(k-1) pairs, so they drift upward with k -- more
+        passages, more chances at a spurious extreme. ``max_passages`` caps k,
+        which bounds that drift as well as the quadratic cost.
+        """
+        usable = [e for e in evidence if e.text.strip()]
+        kept = sorted(usable, key=lambda e: -clamp(e.relevance))[:max_passages]
+        r = clamp(self.sufficiency(query, kept).r)
+
+        if len(kept) < 2:
+            # Nothing to compare against: corroboration and contradiction are
+            # undefined with fewer than two sources, so the set is purely
+            # indeterminate on the retrieval axis.
+            return PairwiseBreakdown(tif=TIF(T=0.0, I=clamp(max(1.0 - r, 1.0)), F=0.0),
+                                     r=r, corroboration=0.0, contradiction=0.0,
+                                     neutrality=1.0, n_passages=len(kept), n_pairs=0)
+
+        ent, neu, con = {}, [], []
+        for i, a in enumerate(kept):
+            for j, b in enumerate(kept):
+                if i == j:
+                    continue
+                e_ij, n_ij, c_ij = self.nli.predict(a.text, b.text)
+                ent[(i, j)] = e_ij
+                neu.append(n_ij)
+                con.append(c_ij)
+
+        corroboration = max(min(ent[(i, j)], ent[(j, i)])
+                            for i in range(len(kept)) for j in range(i + 1, len(kept)))
+        contradiction = max(con)
+        neutrality = sum(neu) / len(neu)
+
+        tif = TIF(T=clamp(r * corroboration),
+                  I=clamp(max(1.0 - r, neutrality)),
+                  F=clamp(r * contradiction))
+        return PairwiseBreakdown(tif=tif, r=r, corroboration=corroboration,
+                                 contradiction=contradiction, neutrality=neutrality,
+                                 n_passages=len(kept), n_pairs=len(con))
+
+    def score_pairwise(self, query: str, evidence: Sequence[Evidence],
+                       max_passages: int = DEFAULT_MAX_PASSAGES) -> TIF:
+        """Pairwise-mode TIF. See :meth:`pairwise_breakdown` for the semantics --
+        in particular that T is CORROBORATION here, not support for a claim."""
+        return self.pairwise_breakdown(query, evidence, max_passages).tif
 
     def score(self, claim: str, evidence: Sequence[Evidence]) -> TIF:
         evidence = [e for e in evidence if e.text.strip()]
