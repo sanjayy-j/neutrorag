@@ -29,6 +29,33 @@ import re
 from dataclasses import dataclass
 from typing import List, Optional, Protocol, Sequence
 
+# ---------------------------------------------------------------------------
+# Saturation targets (Decision 2)
+# ---------------------------------------------------------------------------
+# THE RULE: target = p75 of that corpus's own retrieval-depth distribution.
+# Derived in experiments/derive_targets.py from passage and domain counts only,
+# and committed before any accuracy was computed from them.
+#
+# Why a per-corpus target rather than one global constant: no fixed target can
+# work. FEVER's passage count is a point mass (p25=median=p75=p90=1, 92.5% of
+# instances at k=1), so no saturating function of k can discriminate there at
+# all; CONFLICTS is concentrated at 8-10, so any target <= 5 saturates it
+# completely (std exactly 0.000 at the old target of 3). The two requirements
+# are mutually exclusive.
+#
+# The real defect in target=3 was never the lost discrimination -- the input
+# carries none on FEVER -- it was the BIAS: support_count sat at the constant
+# 0.333 and dragged r down on every single instance, which is what pushed
+# 143/200 FEVER instances below the F12 cliff at r <= 0.5.
+#
+# These module defaults are therefore the UNBIASED fallback for a corpus whose
+# depth distribution is unknown: a target of 1 saturates every instance, so the
+# component contributes a constant 1.0 -- equally non-discriminating, but it
+# subtracts nothing. Corpus-specific targets live with their loaders
+# (fever.SUPPORT_TARGET, conflicts.SUPPORT_TARGET / DIVERSITY_TARGET).
+DEFAULT_SUPPORT_TARGET = 1
+DEFAULT_DIVERSITY_TARGET = 1
+
 _WORD = re.compile(r"[a-z0-9]+")
 
 # Function words carry no topical information, so counting them in `coverage`
@@ -83,7 +110,7 @@ def coverage(claim: str, passages: Sequence[str]) -> float:
 
 
 def support_count(relevances: Sequence[float], floor: float = 0.3,
-                  target: int = 3) -> float:
+                  target: int = DEFAULT_SUPPORT_TARGET) -> float:
     """How many passages cleared the relevance floor, saturating at ``target``.
 
     Rationale: one on-topic passage is thin evidence; three independent ones is
@@ -136,7 +163,7 @@ def connectivity(claim: str, graph: Optional[GraphLike] = None,
     return 0.0 if best is None else 1.0 / best
 
 
-def diversity(sources: Sequence[str], target: int = 3) -> float:
+def diversity(sources: Sequence[str], target: int = DEFAULT_DIVERSITY_TARGET) -> float:
     """How many distinct sources the passages came from, saturating at ``target``.
 
     Rationale: five passages copied from one document are one source's word, not
@@ -204,8 +231,8 @@ def retrieval_sufficiency(
     graph: Optional[GraphLike] = None,
     weights: SufficiencyWeights = DEFAULT_WEIGHTS,
     floor: float = 0.3,
-    support_target: int = 3,
-    diversity_target: int = 3,
+    support_target: int = DEFAULT_SUPPORT_TARGET,
+    diversity_target: int = DEFAULT_DIVERSITY_TARGET,
     max_hops: int = 3,
 ) -> SufficiencyBreakdown:
     """Combine the four components into r in [0, 1].

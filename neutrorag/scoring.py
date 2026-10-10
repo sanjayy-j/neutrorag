@@ -64,8 +64,8 @@ from typing import List, Optional, Protocol, Sequence, Tuple
 
 from .core import TIF, clamp
 from .sufficiency import (
-    DEFAULT_WEIGHTS, GraphLike, SufficiencyBreakdown, SufficiencyWeights,
-    retrieval_sufficiency,
+    DEFAULT_DIVERSITY_TARGET, DEFAULT_SUPPORT_TARGET, DEFAULT_WEIGHTS, GraphLike,
+    SufficiencyBreakdown, SufficiencyWeights, retrieval_sufficiency,
 )
 
 _WORD = re.compile(r"[a-z0-9]+")
@@ -199,6 +199,12 @@ class NLIRetrievalScorer:
     # Evidence.source enables diversity. Both degrade gracefully when absent.
     graph: Optional[GraphLike] = None
     sufficiency_weights: SufficiencyWeights = DEFAULT_WEIGHTS
+    # Saturation targets for the two count-based components. Per-corpus by
+    # design (Decision 2): target = p75 of that corpus's depth distribution.
+    # Supply fever.SUPPORT_TARGET or conflicts.SUPPORT_TARGET/DIVERSITY_TARGET;
+    # the defaults are the unbiased fallback for unknown depth.
+    support_target: int = DEFAULT_SUPPORT_TARGET
+    diversity_target: int = DEFAULT_DIVERSITY_TARGET
     # Set to a float to bypass the sufficiency computation and pin r to that
     # value. Exists for the r-ablation (r = 0.9 reproduces the pre-Gate-B
     # behaviour exactly); not for production use.
@@ -222,6 +228,8 @@ class NLIRetrievalScorer:
             sources=sources if any(s for s in sources) else None,
             graph=self.graph,
             weights=self.sufficiency_weights,
+            support_target=self.support_target,
+            diversity_target=self.diversity_target,
         )
 
     def score(self, claim: str, evidence: Sequence[Evidence]) -> TIF:

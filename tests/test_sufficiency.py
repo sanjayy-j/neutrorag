@@ -12,6 +12,8 @@ import pytest
 
 from neutrorag import sufficiency
 from neutrorag.sufficiency import (
+    DEFAULT_DIVERSITY_TARGET,
+    DEFAULT_SUPPORT_TARGET,
     DEFAULT_WEIGHTS,
     SufficiencyWeights,
     connectivity,
@@ -209,7 +211,11 @@ def test_aggregate_uses_only_available_components_and_renormalises():
     )
     assert set(out.components) == {"coverage", "support_count"}
     assert out.weights_used == pytest.approx({"coverage": 0.5, "support_count": 0.5})
-    assert out.r == pytest.approx((1.0 + 1 / 3) / 2)
+    # Against the NAMED default, not a magic number: Decision 2 moved the module
+    # default from 3 to 1 (the unbiased fallback for unknown corpus depth), so a
+    # single passage now saturates support_count instead of scoring 1/3.
+    expected_support = min(1.0, 1 / DEFAULT_SUPPORT_TARGET)
+    assert out.r == pytest.approx((1.0 + expected_support) / 2)
 
 
 def test_aggregate_includes_all_four_when_inputs_are_available():
@@ -256,3 +262,17 @@ def test_weights_are_configurable_for_the_sensitivity_sweep():
 def test_default_weights_are_equal():
     assert DEFAULT_WEIGHTS.as_dict() == {"coverage": 0.25, "support_count": 0.25,
                                          "connectivity": 0.25, "diversity": 0.25}
+
+
+def test_module_default_targets_are_the_unbiased_fallback():
+    """Decision 2: an unknown-depth corpus must not be silently penalised.
+
+    A target of 1 saturates every instance, so the component contributes a
+    constant 1.0 -- non-discriminating but unbiased. The old target of 3 pinned
+    FEVER's support_count at 0.333 and dragged r down on every instance, which
+    is what put 143/200 instances below the F12 cliff.
+    """
+    assert DEFAULT_SUPPORT_TARGET == 1
+    assert DEFAULT_DIVERSITY_TARGET == 1
+    assert support_count([0.9]) == 1.0
+    assert diversity(["one-source"]) == 1.0

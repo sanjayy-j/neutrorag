@@ -64,6 +64,13 @@ TYPE_TO_EXPECTED_ACTION = {
 # Excluded from every per-type claim: 5 instances cannot support one.
 TOO_FEW_TO_EVALUATE = {"Conflict due to misinformation"}
 
+# Saturation targets for CONFLICTS (Decision 2): p75 of this corpus's own depth
+# distributions -- 10 passages, 9 distinct domains. At the previous target of 3
+# both components were 100% saturated (std exactly 0.000), i.e. constant and
+# useless. Derived in experiments/derive_targets.py from depth alone.
+SUPPORT_TARGET = 10
+DIVERSITY_TARGET = 9
+
 RELEVANCE_SOURCE = """derived, not published.
 
 The release carries no retrieval score, so relevance is computed here as the

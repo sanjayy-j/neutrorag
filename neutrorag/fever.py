@@ -51,6 +51,14 @@ LABEL_TO_CHANNEL = {"SUPPORTS": "T", "NOT ENOUGH INFO": "I", "REFUTES": "F"}
 # claim measured on it is measuring this constant.
 GOLD_EVIDENCE_RELEVANCE = 1.0
 
+# Saturation target for support_count on FEVER (Decision 2): p75 of this
+# corpus's passage-count distribution, which is 1 -- 92.5% of instances carry
+# exactly one gold passage. The component is therefore CONSTANT at 1.0 here and
+# contributes no discrimination; that is a property of the corpus, not of the
+# target. Derived in experiments/derive_targets.py. Diversity is undefined on
+# FEVER (zero evidence items carry a source) and is dropped by the aggregator.
+SUPPORT_TARGET = 1
+
 
 @dataclass
 class FeverExample:
