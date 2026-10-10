@@ -315,8 +315,14 @@ class NLIRetrievalScorer:
         which bounds that drift as well as the quadratic cost.
         """
         usable = [e for e in evidence if e.text.strip()]
+        # r is computed on the FULL retrieved set, not the capped one. The cap is
+        # a compute budget on the O(k^2) pairwise comparison; it is not a claim
+        # that retrieval returned fewer passages. Computing r on the capped set
+        # would make every CONFLICTS instance show exactly max_passages, which
+        # re-saturates support_count at a constant and reintroduces precisely the
+        # bias Decision 2 removed.
+        r = clamp(self.sufficiency(query, usable).r)
         kept = sorted(usable, key=lambda e: -clamp(e.relevance))[:max_passages]
-        r = clamp(self.sufficiency(query, kept).r)
 
         if len(kept) < 2:
             # Nothing to compare against: corroboration and contradiction are

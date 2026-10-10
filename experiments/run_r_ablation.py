@@ -39,7 +39,7 @@ sys.path.insert(0, str(REPO / "experiments"))
 from make_results_table import (  # noqa: E402  -- reuse, do not duplicate metrics
     CHANNELS, accuracy, confusion, confusion_md, mcnemar_exact, per_class, wald_ci,
 )
-from neutrorag.fever import load_fever_hf  # noqa: E402
+from neutrorag.fever import SUPPORT_TARGET, load_fever_hf  # noqa: E402
 from neutrorag.scoring import NLIRetrievalScorer  # noqa: E402
 
 
@@ -90,8 +90,10 @@ def main() -> None:
         e, n, c = float(row["e"]), float(row["n"]), float(row["c"])
 
         const = NLIRetrievalScorer(nli=_ReplayNLI((e, n, c), len(ex.evidence)),
-                                   r_override=args.r_const)
-        suff = NLIRetrievalScorer(nli=_ReplayNLI((e, n, c), len(ex.evidence)))
+                                   r_override=args.r_const,
+                                   support_target=SUPPORT_TARGET)
+        suff = NLIRetrievalScorer(nli=_ReplayNLI((e, n, c), len(ex.evidence)),
+                                  support_target=SUPPORT_TARGET)
         pred_const.append(const.score(ex.claim, ex.evidence).dominant)
         pred_suff.append(suff.score(ex.claim, ex.evidence).dominant)
         pred_raw.append(max({"T": e, "I": n, "F": c}, key={"T": e, "I": n, "F": c}.get))
