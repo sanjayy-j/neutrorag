@@ -20,7 +20,7 @@ this file, it does not go in the report.
 |---|---|
 | **Gate A** | **FAILED** — the raw NLI baseline scores higher than NeutroRAG |
 | **Gate B** (definition of `r`) | signed off, revised; `r` implemented AND `I = max(1-r, n)`. **Prediction confirmed — the mass identity is broken** |
-| **Decision 1** (pairwise mode) | implemented; **sanity gate passed** on real NLI |
+| **Decision 1** (pairwise mode) | implemented; sanity gate passed, but **both CONFLICTS stop conditions fired** |
 | **Decision 2** (saturation targets) | re-derived from depth alone and committed before any accuracy run (`4df956b`) |
 | **Gate C** (expansion loop not a no-op) | test written and **passing** — see below |
 
@@ -280,6 +280,69 @@ python experiments/run_r_ablation.py     # replays fever_run_200.csv; model not 
 negative and significant**: McNemar b=0, c=18, p=0.0000. Computed `r` does not
 win a single row that it loses. `r` now spans 26 distinct values, median 0.750.
 Reported, not tuned.
+
+## Task 4: the policy test in pairwise mode — BOTH stop conditions fired
+
+```bash
+python experiments/score_conflicts_pairwise.py      # 100 instances, 2000 pairs
+python experiments/run_conflicts_pairwise_eval.py
+python experiments/diagnose_pairwise_reversal.py
+```
+
+### Stop condition 2 — contradiction reverses again
+
+| conflict type | n | median contradiction | median corroboration |
+|---|---:|---:|---:|
+| Conflicting opinions | 40 | **0.100** | 0.878 |
+| No conflict | 40 | **0.331** | 0.757 |
+| Complementary information | 10 | 0.667 | 0.709 |
+| Outdated information | 10 | 0.888 | 0.911 |
+
+Mann-Whitney U=525, z=−2.65, **p = 8.14e-03** — significantly **higher on
+No conflict**. The prediction was the opposite.
+
+### Stop condition 3 — the policy fires on the wrong class
+
+| conflict type | answer | expand | surface_contradiction | n |
+|---|---:|---:|---:|---:|
+| Conflicting opinions | 18 | 15 | **7** | 40 |
+| No conflict | 9 | 16 | **15** | 40 |
+| Complementary information | 1 | 4 | 5 | 10 |
+| Outdated information | 1 | 2 | 7 | 10 |
+
+SURFACE_CONTRADICTION fires on **17.5%** of Conflicting opinions vs **37.5%** of
+No conflict. Exact-match accuracy **0.200** (95% CI 0.112–0.288, n=80);
+surface_contradiction recall 0.175, answer recall 0.225.
+
+**On this evidence the policy's central claim is unsupported.**
+
+### This is not the previous measurement error
+
+Pairwise mode **passed its sanity gate** on real NLI, so the instrument works.
+The mechanism, from `diagnose_pairwise_reversal.py`:
+
+- **Real conflicts are hedged, and NLI reads them as agreement.** The
+  lowest-contradiction Conflicting-opinions instance pairs *"some companies
+  require a degree, but it's becoming less…"* against *"anyone can become
+  proficient"* — max entailment **0.992**, max contradiction **0.006**.
+- **Different aspects produce spurious contradiction.** The
+  highest-contradiction No-conflict instance pairs *"Starmer became PM on 5 July
+  2024"* against *"there is no specific date for when the office first
+  appeared"* — **c = 0.999**. Both true, different questions.
+- Per-pair contradiction is rare (median 0.021; 5.7% of 2000 pairs above 0.5),
+  so a max over 20 pairs is an order statistic latching onto the rare spurious
+  pair.
+- **The reversal is not an artefact of `max`:** the mean over pairs reverses too
+  (−0.053). The per-pair signal itself is anti-correlated with annotated
+  conflict. Reported as a diagnostic only — the statistic was **not** changed
+  after seeing which way it separates.
+
+**Unresolved confound:** the top-5 cap keeps the passages most similar to the
+*question*, and a passage restating the question outranks one disputing its
+premise, so the cap is not conflict-neutral. Not testable from this cache.
+
+**Cost:** projected 2.49 h, actual **12.8 h** (23.0 s/pair against a 4.48 s/pair
+probe). The probe was unrepresentative; the stated 3-hour ceiling was breached.
 
 ## RETRACTED
 
