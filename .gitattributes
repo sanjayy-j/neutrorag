@@ -1,0 +1,25 @@
+# Normalise text to LF in the repository and check it out as LF everywhere.
+#
+# Why this exists: Python's open(path, "w") on Windows translates "\n" to
+# "\r\n", so any file rewritten by a script in experiments/ came back as CRLF
+# and produced a whole-file diff instead of a reviewable one. That churn once
+# rewrote the frozen First Review dump, which is cited by hash in RESULTS.md.
+* text=auto eol=lf
+
+# ---------------------------------------------------------------------------
+# EXCEPTION -- the frozen Gate A dump.
+#
+# fever_run_200_gateA.csv is the per-example dump for the construction exactly
+# as submitted at First Review. Its committed bytes are fully CRLF (201 CRLF,
+# 0 bare LF) because it was produced by the original Windows run, and RESULTS.md
+# cites its SHA-256 (70a3a783...84c6b7) as the evidence that it is retained
+# unmodified -- the retraction of the 0.745 headline rests on it.
+#
+# "-text" disables newline conversion entirely, so git stores and checks out
+# the bytes verbatim. Without this line the rule above would renormalise the
+# file to LF and invalidate the published hash. Do not remove it, and do not
+# "fix" the line endings of this file.
+fever_run_200_gateA.csv -text
+
+# Binary artefacts, declared rather than left to auto-detection.
+*.png binary
