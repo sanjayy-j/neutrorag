@@ -598,7 +598,7 @@ python experiments/run_pipeline_demo.py --nli real
 code, and this run no longer reproduces it.** Both the triple and the action have
 changed:
 
-| | submitted report (screenshot) | current code (`a79f5ae`) |
+| | submitted report (screenshot) | current code (post-Step-6) |
 |---|---|---|
 | triple | `TIF(T=0.223, I=0.603, F=0.347)` | `TIF(T=0.209, I=0.603, F=0.663)` |
 | steps | identical at steps 0, 1, 2 | a single step 0 |
