@@ -93,13 +93,23 @@ Same data, same replayed NLI outputs, `I` held at `max(1-r, n)`; only `r` varies
 **p = 0.0000**. Large and highly significant.
 
 **This measures memo F9, not the sufficiency design.** FEVER gives one gold
-passage per claim: 185/200 rows carry exactly one, so with `support_target = 3`
-the `support_count` component is pinned at 1/3, and with no graph and no
-provenance `connectivity` and `diversity` are unavailable. `r` is therefore
-bounded above by `(coverage + 0.333)/2 ≤ 0.667` on those rows **structurally**.
-Median `r` = 0.417; 143/200 rows land at `r ≤ 0.5`, where `I = max(1-r, n) ≥ 0.5`
-by construction. Condition (b) consequently predicts I nearly everywhere
-(I-recall 0.970; F-recall collapses 0.853 → 0.162). No parameter was retuned.
+passage per claim: 185/200 rows carry exactly one, and with no graph and no
+provenance `connectivity` and `diversity` are unavailable. Only `coverage` can
+really vary, so `r` is a near-proxy for claim/passage token overlap on this
+corpus rather than a measure of retrieval depth.
+
+Under the Decision-2 target (`support_target = 1`, FEVER's own p75 depth)
+`support_count` saturates on every row and `r` spans [0.500, 1.000] with a median
+of **0.750** and 26 distinct values; **17/200** rows land at `r ≤ 0.5`, the memo
+F12 regime where `I = max(1-r, n) ≥ 0.5` automatically. Condition (b) loses on
+precisely those low-`r` rows: F-recall falls 0.853 → **0.662** and T-recall
+0.631 → **0.554**, while I-recall is flat at 0.776 and I-*precision* falls to
+0.500 — it is predicting I more often and being wrong when it does. No parameter
+was retuned; the targets were committed before this run.
+
+*(These figures were 0.417 and 143/200 before the Decision-2 calibration. The
+earlier reading — that the whole corpus sat inside the F12 regime — no longer
+holds, and the current explanation is the low-`r` tail, not the corpus median.)*
 
 ## Sensitivity sweep (memo F12)
 
@@ -118,12 +128,42 @@ under **both** formulas. Empirically the cliff is sharp:
 | 0.52 | 62.5% | 40.0% | 0.680 |
 | 1.00 | 41.0% | 37.0% | 0.765 |
 
-I is the argmax for *every* claim at any `r ≤ 0.42`. FEVER's median `r` of 0.417
-puts the whole corpus inside that regime.
+I is the argmax for *every* claim at any `r ≤ 0.42`, and for at least half of
+them at any `r ≤ 0.58`.
+
+**The median-`r` figure here moved with the Decision-2 calibration and the
+conclusion inverted.** Before calibration FEVER's median `r` was 0.417, which put
+the whole corpus inside the degenerate regime. Under the committed targets the
+median is **0.750**, the range is [0.500, 1.000], and **0 of 200** rows fall at
+`r ≤ 0.42`. The corpus is no longer inside that regime, so the F12 cliff is not
+the explanation for the current FEVER result — the mechanism below is.
+
+**Why the computed `r` loses to a constant one.** The sweep pins `r`, so its
+rows are directly comparable to the live system, which computes it. Every pinned
+value in the observed range beats the computed one: `r = 1.0` scores 0.765,
+`r = 0.8` scores 0.745, `r = 0.6` scores 0.735 — while the computed, *varying*
+`r` scores **0.665**. It is therefore not the level of `r` that costs accuracy
+but its spread. The 20 rows carrying the lowest `r` get an `I` floor of `1-r`
+large enough to win the argmax, and the live system pays for them while any
+constant `r ≥ 0.6` does not.
+
+That is the whole of the −0.0900 gap, and it is unusually clean:
+
+- The two systems differ on exactly **20 of 200** rows.
+- On **all 20**, NeutroRAG predicts **`I`** — not one is a T↔F disagreement.
+- The baseline is correct on **19** of those 20 (McNemar c=19, b=1).
+- **17 of the 20** are rows with `r ≤ 0.58`.
+
+So the layer's only effect on FEVER is to overwrite a correct, confident NLI
+judgement with "not enough info" on the rows where retrieval sufficiency scores
+low — and on FEVER, `r` scoring low is mostly an artefact of the corpus (one gold
+passage, constant relevance, no graph, no source labels) rather than a fact about
+the evidence. That is a measurement-validity problem for `r` on this corpus, and
+it is the same conclusion the r-ablation reached from the other direction.
 
 Other sweep observations, none acted on: accuracy is highest at `r = 1.0`
-(0.765) — `r` contributes nothing positive on FEVER, and the small edge over raw
-`argmax(e,n,c)` (0.755) comes from `λ·disagree` in F. `lambda` is nearly flat for
+(0.765), and the small edge there over raw `argmax(e,n,c)` (0.755) comes from
+`λ·disagree` in F. `lambda` is nearly flat for
 attribution (0.455–0.470 over 0–2) but monotonically raises the
 SURFACE_CONTRADICTION rate. `connectivity` and `diversity` weights are inert on
 FEVER; at weight 1.0 for either, every *available* component has zero weight and
@@ -208,10 +248,14 @@ are evidence that the scorer was applied outside its task definition.
 
 `support_count` and `diversity` **saturate at 1.0** on every instance (≥5
 passages, ≥3 domains, frozen target 3); `r` spans only 0.867–1.000 with 0/130
-below 0.5. FEVER pinned `r` low (median 0.417, 143/200 below 0.5); CONFLICTS
-pins it high. **Neither venue exercises `r` across its range**, which is a
-property of the components' targets, not of either dataset. Reported, not
-retuned.
+below 0.5. FEVER spans [0.500, 1.000] with a median of 0.750 and 17/200 rows at
+`r ≤ 0.5`; CONFLICTS pins it high. **Neither venue exercises `r` across its full
+range**, which is a property of the components' targets, not of either dataset.
+Reported, not retuned.
+
+*(Before the Decision-2 calibration FEVER's median was 0.417 with 143/200 below
+0.5, and the sentence above read "FEVER pinned `r` low". Calibrating the targets
+moved FEVER into the upper half of the range; it did not widen it.)*
 
 ## Decision 2: saturation targets, derived from depth alone
 
