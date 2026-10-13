@@ -21,7 +21,7 @@ this file, it does not go in the report.
 | **Gate A** | **FAILED** — the raw NLI baseline scores higher than NeutroRAG |
 | **Gate B** (definition of `r`) | signed off, revised; `r` implemented AND `I = max(1-r, n)`. **Prediction confirmed — the mass identity is broken** |
 | **Decision 1** (pairwise mode) | implemented; sanity gate passed, but **both CONFLICTS stop conditions fired** |
-| **Decision 2** (saturation targets) | re-derived from depth alone and committed before any accuracy run (`4df956b`) |
+| **Decision 2** (saturation targets) | re-derived from depth alone and committed before any accuracy run (`53d305e`) |
 | **Gate C** (expansion loop not a no-op) | test written and **passing** — see below |
 
 > **Step 6 landed** (pairwise `disagree`), and **Step 9 (CONFLICTS) ran and was
@@ -231,7 +231,7 @@ explicitly *not* the spread-maximising value — that is still fitting, even to
 depth. `fever.SUPPORT_TARGET = 1`, `conflicts.SUPPORT_TARGET = 10`,
 `conflicts.DIVERSITY_TARGET = 9`, module fallback 1 (unbiased).
 
-| prediction, committed in `4df956b` before any run | outcome |
+| prediction, committed in `53d305e` before any run | outcome |
 |---|---|
 | FEVER r median 0.417 → **0.750** | **0.750** ✓ |
 | FEVER instances at r ≤ 0.5: 143/200 → **17/200** | **17/200** ✓ |

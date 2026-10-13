@@ -1,7 +1,7 @@
 # CONFLICTS policy test -- PAIRWISE mode (Decision 1)
 
 Cache `data/conflicts_pairwise.jsonl` | model `MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli` | max_passages 5 | sampling `{"seed": 20261011, "quota": {"Conflicting opinions and research outcomes": 40, "No conflict": 40, "Complementary information": 10, "Conflict due to outdated information": 10}}`
-`python experiments/run_conflicts_pairwise_eval.py` | commit `72c719c`
+`python experiments/run_conflicts_pairwise_eval.py` | commit `596dfe9`
 
 **T is CORROBORATION in this mode** -- mutual agreement between sources, not support for a claim.
 
