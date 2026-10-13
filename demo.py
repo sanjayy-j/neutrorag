@@ -27,15 +27,27 @@ def main():
     scorer = NLIRetrievalScorer(nli=MockNLIBackend())
     policy = NeutroPolicy()
 
-    print("NeutroRAG demo  --  MOCK NLI backend (offline scaffold, not paper results)")
+    print("=" * 68)
+    print("NeutroRAG demo -- ILLUSTRATIVE PLUMBING, NOT EXPERIMENTAL RESULTS")
+    print("=" * 68)
+    print("Backend : MockNLIBackend -- a lexical-overlap heuristic, NOT an NLI model.")
+    print("Data    : 12 hand-written examples embedded in fever.py.")
+    print("The figures below show that the pipeline runs. They are NOT research")
+    print("results and must not be quoted as any. The project's real numbers")
+    print("live in RESULTS.md, with the commands that produced them.")
+    print("=" * 68)
 
     # 1) FEVER proof-of-concept -------------------------------------------------
     hr("1. FEVER -> (T, I, F) premise check")
     examples = load_sample()
     tifs, gold = score_examples(examples, scorer)
     attr = failure_type_attribution(tifs, gold)
-    print(f"Failure-type attribution accuracy: {attr['accuracy']:.3f} "
-          f"(dominant channel vs. gold SUPPORTS/NEI/REFUTES)\n")
+    print(f"[illustrative, mock NLI, n=12] dominant channel vs. gold: "
+          f"{attr['accuracy']:.3f}")
+    print("  ^ a plumbing check on 12 toy examples -- NOT the FEVER result.")
+    print("    The real FEVER number is in RESULTS.md and is RETRACTED as a")
+    print("    NeutroRAG result: a raw argmax(e,n,c) baseline scores higher.")
+    print()
     print(format_confusion(attr["confusion"]))
     print("\nPer-example dominant channel:")
     for ex, tif in zip(examples, tifs):
@@ -70,13 +82,18 @@ def main():
         print(f"  {name:22s} -> {d.action.value:22s} {d.tif}  | {d.rationale}")
 
     # 3) Fuzzy-collapse ablation ------------------------------------------------
-    hr("3. Fuzzy-collapse ablation (the month-3 go/no-go)")
-    ab = fuzzy_collapse_ablation(tifs, gold)
-    print(f"  full neutrosophic (T,I,F) attribution : {ab.full_attribution:.3f}")
-    print(f"  collapsed (I+F merged) attribution    : {ab.collapsed_attribution:.3f}")
-    print(f"  delta (value of the I/F distinction)  : {ab.delta:+.3f}")
-    print("\n  A positive delta is the evidence that separating indeterminacy")
-    print("  from contradiction earns its keep -- the paper's key ablation.")
+    hr("3. Fuzzy-collapse ablation -- WITHDRAWN")
+    print("  This demo no longer prints a fuzzy-collapse delta.")
+    print()
+    print("  The ablation was withdrawn on review: it is arithmetic, not an")
+    print("  experiment. Collapsing three classes to two always loses the")
+    print("  minority class, so any I/F-merged model is capped at 0.665 by the")
+    print("  label prior alone, and the reported collapsed figure is recoverable")
+    print("  from the published confusion matrix by summing two columns.")
+    print()
+    print("  eval.fuzzy_collapse_ablation() is still importable and unchanged;")
+    print("  it is simply no longer presented as evidence. See RESULTS.md,")
+    print("  section RETRACTED, and memo finding F4.")
 
 
 if __name__ == "__main__":
