@@ -14,7 +14,8 @@ deviation and states plainly whether the identity broke or held.
     python experiments/check_mass_identity.py
     python experiments/check_mass_identity.py --draws 200000
 
-The real-run check replays the NLI outputs recorded in fever_run_200.csv
+The real-run check replays the NLI outputs recorded in
+fever_run_200_current.csv
 through the current scorer, so the model is not re-run and the e/n/c values are
 bit-identical to the Gate A run; only r differs.
 """
@@ -41,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--draws", type=int, default=200_000)
-    p.add_argument("--csv", default="fever_run_200.csv")
+    p.add_argument("--csv", default="fever_run_200_current.csv")
     p.add_argument("--seed", type=int, default=20260913)
     return p.parse_args()
 
@@ -142,7 +143,7 @@ def check_random_computed_r(draws: int, rng: random.Random) -> float:
 
 
 def check_real_run_fever(csv_path: Path) -> float:
-    """Real run: the 200 FEVER claims, replaying the Gate A NLI outputs."""
+    """Real run: the 200 FEVER claims, replaying the recorded NLI outputs."""
     from neutrorag.fever import load_fever_hf
 
     rows = list(csv.DictReader(open(csv_path, encoding="utf-8")))
@@ -244,7 +245,7 @@ def main() -> None:
 
     csv_path = REPO / args.csv
     if csv_path.exists():
-        print("\n[4] real run: 200 FEVER claims, replaying the Gate A NLI outputs")
+        print("\n[4] real run: 200 FEVER claims, replaying the recorded NLI outputs")
         results["real run (FEVER 200)"] = check_real_run_fever(csv_path)
         print(f"    max deviation = {results['real run (FEVER 200)']:.3e}")
     else:

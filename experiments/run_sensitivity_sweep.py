@@ -9,7 +9,8 @@ reports what would happen if it moved, so the choice of defaults becomes a
 stated, inspectable decision rather than an unexamined one.
 
 Four sweeps, all on the 200 FEVER claims with the NLI outputs replayed from
-fever_run_200.csv (the model is never re-run, so every condition sees identical
+fever_run_200_current.csv (the model is never re-run, so every condition sees
+identical
 model output):
 
   A. r swept directly via r_override -- answers "at what r does I take over?"
@@ -67,7 +68,7 @@ class _Replay:
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--csv", default="fever_run_200.csv")
+    p.add_argument("--csv", default="fever_run_200_current.csv")
     p.add_argument("--outdir", default="results")
     return p.parse_args()
 

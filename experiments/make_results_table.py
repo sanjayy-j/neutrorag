@@ -1,4 +1,4 @@
-"""Build the Section 5(d) results table from fever_run_200.csv.
+"""Build the Section 5(d) results table from a fever_run_200_*.csv dump.
 
 Emits per-class precision / recall / F1 / support and macro-F1 for BOTH
 argmax(T, I, F) (NeutroRAG) and the raw argmax(e, n, c) NLI baseline, side by
@@ -9,7 +9,8 @@ than inside a screenshot (memo F18, F17).
 Reads only the committed CSV; no model is loaded and no network is used.
 
     python experiments/make_results_table.py
-    python experiments/make_results_table.py --csv fever_run_200.csv --outdir results
+    python experiments/make_results_table.py --csv fever_run_200_current.csv \n        --out-prefix fever_200_metrics_current
+    python experiments/make_results_table.py --csv fever_run_200_gateA.csv \n        --out-prefix fever_200_metrics_gateA
 """
 from __future__ import annotations
 
@@ -26,8 +27,11 @@ CHANNEL_GLOSS = {"T": "T (SUPPORTS)", "I": "I (NOT ENOUGH INFO)", "F": "F (REFUT
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--csv", default="fever_run_200.csv")
+    p.add_argument("--csv", default="fever_run_200_current.csv")
     p.add_argument("--outdir", default="results")
+    p.add_argument("--out-prefix", default="fever_200_metrics",
+                   help="basename for the emitted .csv/.md, so the Gate A and "
+                        "current-construction tables can coexist")
     return p.parse_args()
 
 
@@ -125,7 +129,7 @@ def main() -> None:
     outdir.mkdir(parents=True, exist_ok=True)
 
     # ---- CSV -------------------------------------------------------------
-    csv_path = outdir / "fever_200_metrics.csv"
+    csv_path = outdir / f"{args.out_prefix}.csv"
     with open(csv_path, "w", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(["system", "class", "precision", "recall", "f1", "support"])
@@ -192,7 +196,7 @@ def main() -> None:
     md.append("")
     md.append(confusion_md(m_raw, "Baseline -- argmax(e, n, c)"))
     md.append("")
-    md_path = outdir / "fever_200_metrics.md"
+    md_path = outdir / f"{args.out_prefix}.md"
     md_path.write_text("\n".join(md) + "\n", encoding="utf-8")
 
     print(f"wrote {md_path}")

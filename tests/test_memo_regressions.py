@@ -29,7 +29,8 @@ def _triple(tif: TIF):
 # gold label is NOT ENOUGH INFO (channel I) that is a guaranteed-correct
 # answer obtained without looking at any evidence.
 #
-# N_empty was 0 in the 200-row run committed as fever_run_200.csv, so this
+# N_empty was 0 in the 200-row run committed as fever_run_200_gateA.csv (and is
+# still 0 in fever_run_200_current.csv), so this
 # path did not contaminate that number -- but it is live code.
 
 _UNUSABLE_FEVER_ROW = {

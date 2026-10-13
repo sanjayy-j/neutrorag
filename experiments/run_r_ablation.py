@@ -12,7 +12,8 @@ with the Gate B change to I. A raw argmax(e, n, c) baseline is reported
 alongside for reference -- it is the Gate A comparator and is unaffected by r.
 
 The NLI model is not re-run: e/n/c are replayed from the committed
-fever_run_200.csv, so all three systems see bit-identical model output and the
+fever_run_200_current.csv, so all three systems see bit-identical model output
+and the
 only thing that varies is r.
 
     python experiments/run_r_ablation.py
@@ -46,7 +47,7 @@ from neutrorag.scoring import NLIRetrievalScorer  # noqa: E402
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--csv", default="fever_run_200.csv")
+    p.add_argument("--csv", default="fever_run_200_current.csv")
     p.add_argument("--outdir", default="results")
     p.add_argument("--r-const", type=float, default=0.9)
     return p.parse_args()

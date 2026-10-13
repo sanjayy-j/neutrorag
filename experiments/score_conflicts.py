@@ -7,7 +7,8 @@ and the full release is 4212 pairs -- about 4.4 hours. Batching does not help
 compute-bound, not overhead-bound).
 
 So this caches PER-PASSAGE (e, n, c) to JSONL, and every downstream experiment
-replays from that cache. Per-passage matters: fever_run_200.csv stored only the
+replays from that cache. Per-passage matters: fever_run_200_gateA.csv stored only
+the
 POOLED triple, which silently made pairwise and pooled `disagree` identical on
 replay. That cannot happen here.
 

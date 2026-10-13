@@ -4,7 +4,9 @@ Unlike ``demo.py`` -- which uses the deterministic mock NLI backend purely as an
 offline scaffold -- this script downloads a real HuggingFace NLI model and real
 FEVER claims (via ``neutrorag.fever.load_fever_hf``, see that module's docstring
 for the exact dataset and evidence-format gotcha) and reports genuine
-failure-type attribution numbers plus the fuzzy-collapse ablation.
+failure-type attribution numbers. (It also prints the fuzzy-collapse ablation,
+which is RETRACTED -- see RESULTS.md; it is kept only so the retracted figure
+remains reproducible.)
 
     python experiments/run_fever_eval.py --limit 200
     python experiments/run_fever_eval.py --limit 50 --model MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli --device cpu
@@ -25,7 +27,7 @@ from neutrorag import HFNLIBackend, NLIRetrievalScorer  # noqa: E402
 from neutrorag.eval import (  # noqa: E402
     failure_type_attribution, format_confusion, fuzzy_collapse_ablation,
 )
-from neutrorag.fever import load_fever_hf  # noqa: E402
+from neutrorag.fever import SUPPORT_TARGET, load_fever_hf  # noqa: E402
 from neutrorag.core import clamp  # noqa: E402
 
 DEFAULT_MODEL = "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli"
@@ -83,15 +85,23 @@ def score_with_instrumentation(examples, scorer, recorder):
             e = sum(w * x[0] for w, x in zip(weights, per_item)) / wsum
             n = sum(w * x[1] for w, x in zip(weights, per_item)) / wsum
             c = sum(w * x[2] for w, x in zip(weights, per_item)) / wsum
-            r = clamp(max(weights))
+            # r comes from the scorer's own (NLI-free) sufficiency computation.
+            # It must NOT be re-derived here: before Gate B this line read
+            # `r = clamp(max(weights))`, which on FEVER's constant gold
+            # relevance of 1.0 silently pinned r and wrote a constant column.
+            r = clamp(scorer.sufficiency(ex.claim, kept).r)
+            # Pairwise conflict, over per-passage outputs (memo F6). On a
+            # single-passage row this reduces to 2*min(e, c).
+            disagree = clamp(2.0 * max(min(x[0], y[2])
+                                       for x in per_item for y in per_item))
         else:  # empty-evidence short-circuit in scorer.score -> no NLI call made
-            e = n = c = r = ""
+            e = n = c = r = disagree = ""
 
         tifs.append(tif)
         gold.append(ex.gold_channel)
         rows.append({
             "claim": ex.claim,
-            "r": r, "e": e, "n": n, "c": c,
+            "r": r, "e": e, "n": n, "c": c, "disagree": disagree,
             "T": tif.T, "I": tif.I, "F": tif.F,
             "gold_label": ex.gold_label,
             "gold_channel": ex.gold_channel,
@@ -102,7 +112,7 @@ def score_with_instrumentation(examples, scorer, recorder):
 
 
 def write_csv(rows, path: str) -> None:
-    cols = ["claim", "r", "e", "n", "c", "T", "I", "F",
+    cols = ["claim", "r", "e", "n", "c", "disagree", "T", "I", "F",
             "gold_label", "gold_channel", "predicted_channel", "evidence_count"]
     with open(path, "w", encoding="utf-8", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=cols)
@@ -131,7 +141,10 @@ def main() -> None:
     print(f"\nLoaded {len(examples)} real FEVER examples in {time.time() - t0:.1f}s")
 
     recorder = _RecordingNLI(HFNLIBackend(model=args.model, device=args.device))
-    scorer = NLIRetrievalScorer(nli=recorder)
+    # support_target is FEVER's own p75 depth (Decision 2), passed explicitly so
+    # the provenance is on the page. It equals the library default of 1, so this
+    # is documentation, not a numeric change.
+    scorer = NLIRetrievalScorer(nli=recorder, support_target=SUPPORT_TARGET)
 
     t0 = time.time()
     tifs, gold, rows = score_with_instrumentation(examples, scorer, recorder)
@@ -144,9 +157,12 @@ def main() -> None:
         if row["r"] == "":
             continue
         r, e, n, c = row["r"], row["e"], row["n"], row["c"]
+        # Current construction: I = max(1-r, n) (revised Gate B) and F uses the
+        # pairwise disagree. If the scoring formula in neutrorag/scoring.py
+        # changes, this check must fail loudly rather than be quietly updated.
         exp_T = clamp(r * e)
-        exp_F = clamp(r * c + scorer.lam * clamp(2.0 * min(e, c)))
-        exp_I = clamp(1.0 - r + r * n)
+        exp_F = clamp(r * c + scorer.lam * row["disagree"])
+        exp_I = clamp(max(1.0 - r, n))
         if max(abs(exp_T - tif.T), abs(exp_I - tif.I), abs(exp_F - tif.F)) > 1e-9:
             mismatches += 1
     print(f"Instrumentation cross-check: {mismatches} mismatch(es) vs scorer output"
@@ -161,7 +177,11 @@ def main() -> None:
     print(f"Accuracy: {attr['accuracy']:.3f}  (argmax(T,I,F) vs gold SUPPORTS/NEI/REFUTES)\n")
     print(format_confusion(attr["confusion"]))
 
-    hr("Fuzzy-collapse ablation (full T,I,F vs I+F merged)")
+    hr("Fuzzy-collapse ablation -- RETRACTED, shown for completeness only")
+    print("  This delta is NOT evidence for the I/F distinction. Merging two")
+    print("  gold classes caps the collapsed accuracy at the majority-class")
+    print("  prior by construction, so a positive delta is arithmetic rather")
+    print("  than an experimental result. See RESULTS.md (Retractions).")
     ab = fuzzy_collapse_ablation(tifs, gold)
     print(f"  full neutrosophic (T,I,F) attribution : {ab.full_attribution:.3f}")
     print(f"  collapsed (I+F merged) attribution    : {ab.collapsed_attribution:.3f}")

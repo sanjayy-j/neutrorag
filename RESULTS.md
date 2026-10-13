@@ -54,10 +54,10 @@ python experiments/check_mass_identity.py
 
 | check | max \|deviation\| | before |
 |---|---:|---:|
-| random draws, `r ~ Uniform(0,1)` | **2.497e-01** | 4.441e-16 |
-| random draws, `r` computed by `sufficiency` | **2.467e-01** | 4.441e-16 |
-| real run: pipeline corpus + graph | **1.364e-01** | 2.220e-16 |
-| real run: 200 FEVER claims | **2.482e-01** | 2.220e-16 |
+| random draws, `r ~ Uniform(0,1)` | **2.499e-01** | 4.441e-16 |
+| random draws, `r` computed by `sufficiency` | **2.496e-01** | 4.441e-16 |
+| real run: pipeline corpus + graph | **1.696e-01** | 2.220e-16 |
+| real run: 200 FEVER claims | **2.275e-01** | 2.220e-16 |
 
 This matches the analytic bound exactly. Deviation is `-r·n` when `1-r > n` and
 `-(1-n)(1-r)` otherwise; both are maximised at `n = 1-r`, where each equals
@@ -67,12 +67,12 @@ This matches the analytic bound exactly. Deviation is `-r·n` when `1-r > n` and
 
 | corpus | min | median | max | mass > 1 | mass < 1 |
 |---|---:|---:|---:|---:|---:|
-| pipeline (4 claims) | 0.958 | 1.059 | 1.368 | 75% | 25% |
-| FEVER (200 claims) | 0.765 | 0.986 | 1.255 | 11.5% | 88.5% |
+| pipeline (4 claims) | 0.930 | 1.100 | 1.471 | 75% | 25% |
+| FEVER (200 claims) | 0.775 | 0.988 | 1.277 | 24.5% | 75.5% |
 
 Under the old `I`, **all 200** FEVER rows had mass > 1, because "mass > 1" was
-identically "disagree > 0". Under the new `I`, 23/200 do, and the two criteria
-**disagree on 88.5% of rows**. The mass can now also fall *below* 1, which it
+identically "disagree > 0". Under the new `I`, 49/200 do, and the two criteria
+**disagree on 75.5% of rows**. The mass can now also fall *below* 1, which it
 previously never could.
 
 ## The r-ablation — computed `r` is much worse, on FEVER
@@ -146,18 +146,23 @@ python experiments/check_conflict_dilution.py --nli real
 | raw, unclamped | 1.739 | 1.739 | 1.739 | 1.739 | 1.739 | 0.000 |
 
 The raw value is identical at every filler count, so the flatness is genuine
-invariance, not clipping. `F` itself still drifts 0.812 → 0.692 because
-`F = r·c + λ·disagree` and both `r` and the pooled `c` fall as filler is added;
-only the `disagree` term was ever expected flat.
+invariance, not clipping. `F` itself still drifts 0.906 → 0.692 (spread 0.214)
+because `F = r·c + λ·disagree` and the pooled `c` falls as filler is added; only
+the `disagree` term was ever expected flat. After the Decision-2 target
+calibration `r` no longer falls with it — it is flat at **0.958** across the
+whole sweep, because `support_count` saturates at the first passage — so the
+residual drift in `F` is now attributable to the pooled `c` alone.
 
 **F8 is fixed.** The flagship drug-trial case now returns **SURFACE_CONTRADICTION
-with F = 0.812** (real NLI) against `tau_F = 0.40`, versus the memo's F = 0.347
+with F = 0.906** (real NLI) against `tau_F = 0.40`, versus the memo's F = 0.347
 and ABSTAIN. It still fires with 4 filler passages added (F = 0.692).
 
-Mass identity still broken (2.497e-01). FEVER numbers **bit-identical** — with
-one caveat: `fever_run_200.csv` stores the *pooled* triple per claim, so on
+Mass identity still broken (2.499e-01). FEVER `e`/`n`/`c` **bit-identical** — with
+one caveat: `fever_run_200_gateA.csv` stores the *pooled* triple per claim, so on
 replay every passage carries the same values and pairwise ≡ pooled by
 construction for **all** row sizes, not only the 185 single-passage ones.
+`fever_run_200_current.csv` records a per-row `disagree` column taken from the
+real per-passage outputs, so figures derived from it do not share that defect.
 
 ## Step 9: CONFLICTS — run, halted, and not interpretable as intended
 
@@ -267,7 +272,7 @@ retrieved set; the cap is a compute budget on the O(k²) comparison only.
 ## FEVER regression under the new targets
 
 ```bash
-python experiments/run_r_ablation.py     # replays fever_run_200.csv; model not re-run
+python experiments/run_r_ablation.py     # replays fever_run_200_current.csv; model not re-run
 ```
 
 | condition | accuracy | macro-F1 |
@@ -350,6 +355,10 @@ These numbers appear in the First Review report and must not be reused as writte
 
 ### 1. `0.745` as a NeutroRAG result — RETRACTED
 
+*This section describes the **Gate A** measurement, i.e. the construction as
+submitted. The current construction scores lower still — see the RQ1 subsection
+under "Current, defensible numbers".*
+
 The figure itself reproduces exactly, but it is **not attributable to the
 neutrosophic layer**. Running `argmax` directly on the NLI head's own
 distribution, using the *identical* model calls, scores **0.7550** — higher.
@@ -361,15 +370,23 @@ distribution, using the *identical* model calls, scores **0.7550** — higher.
 | difference | −0.0100 | | −0.0098 |
 
 The two systems differ on **4 of 200** rows. Exact McNemar: b=1, c=3, **p = 0.625** —
-the difference is not statistically significant in either direction. The honest
-claim is therefore *"the neutrosophic construction produces no measurable benefit
-over the bare classifier on this data,"* not *"it is worse."*
+the difference is not statistically significant in either direction. For the
+submitted construction the honest claim was therefore *"the neutrosophic
+construction produces no measurable benefit over the bare classifier on this
+data,"* not *"it is worse."*
+
+> **That qualification no longer holds for the current code.** Under the
+> construction on `main` the same comparison gives 0.6650 vs 0.7550, a gap of
+> −0.0900 with exact McNemar b=1, c=19, **p = 0.0000** — significant, and in the
+> direction of worse. "No measurable benefit" was the correct reading of the
+> Gate A numbers and remains the correct reading of the *submitted* system; it
+> understates what the current numbers say.
 
 Corroboration: the model card for `MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli`
 reports **0.777** on the full FEVER-NLI dev set. Our 0.755 on a 200-row subset of
 that same split is consistent with simply re-measuring the classifier.
 
-*Source: `results/fever_200_metrics.md`, from `fever_run_200.csv`.*
+*Source: `results/fever_200_metrics_gateA.md`, from `fever_run_200_gateA.csv`.*
 
 ### 2. The fuzzy-collapse ablation delta `+0.205` — RETRACTED
 
@@ -398,36 +415,110 @@ described using the old semantics.
 
 ## Current, defensible numbers
 
-### FEVER run (n = 200)
+### FEVER run (n = 200) — the current construction
 
 `copenlu/fever_gold_evidence` validation split, `MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli`, CPU.
 
 ```bash
-python experiments/run_fever_eval.py --limit 200 --csv fever_run_200.csv   # ~150s
-python experiments/make_results_table.py
+python experiments/run_fever_eval.py --limit 200 --csv fever_run_200_current.csv   # ~150s
+python experiments/make_results_table.py --csv fever_run_200_current.csv \
+    --out-prefix fever_200_metrics_current
 ```
 
-Full per-class table and both confusion matrices: **`results/fever_200_metrics.md`**.
-Per-example dump: **`fever_run_200.csv`** (200 rows: claim, r, e, n, c, T, I, F,
+Full per-class table and both confusion matrices:
+**`results/fever_200_metrics_current.md`**. Per-example dump:
+**`fever_run_200_current.csv`** (200 rows: claim, r, e, n, c, disagree, T, I, F,
 gold, predicted, evidence_count).
+
+This is the construction on `main`: `r` from retrieval sufficiency,
+`I = max(1-r, n)`, pairwise `disagree`, Decision-2 saturation targets.
 
 | quantity | value | note |
 |---|---|---|
-| attribution accuracy `argmax(T,I,F)` | 0.7450 ± 0.0308 | not attributable to NeutroRAG (above) |
+| attribution accuracy `argmax(T,I,F)` | **0.6650 ± 0.0334** | 95% CI [0.600, 0.730] |
+| baseline accuracy `argmax(e,n,c)` | **0.7550 ± 0.0304** | identical NLI calls; unchanged since Gate A |
+| difference | **−0.0900** | macro-F1 −0.0844 (0.6730 vs 0.7574) |
+| rows where predictions differ | 20 / 200 | |
+| McNemar (exact) | **b=1, c=19, p=0.0000** | **significant** at α=0.05 |
+| `N_empty` (memo F3) | **0 / 200** | the leak is live code but fired zero times here |
+| `r` (memo F1, resolved by Gate B) | 26 distinct values, median 0.750, range [0.500, 1.000] | `r` is now a signal, not a constant |
+| `disagree` (memo F6/F9) | median 0.0115, mean 0.0299, max 0.7165; 13/200 rows > 0.1 | conflict term near-inert on FEVER |
+| evidence passages per row | 185 rows have exactly 1 | so there is no pair to compare on most rows |
+| mass identity deviation (memo F5) | **2.275e-01** | identity **broken**, as the revised Gate B predicted |
+| mass `T+I+F` | min 0.775, median 0.988, max 1.277; >1 on 49/200 (24.5%) | |
+
+#### This answers RQ1, and the answer got worse
+
+**RQ1 — does the neutrosophic decomposition beat the classifier alone? No, and
+now significantly so.**
+
+| | Gate A (as submitted) | current construction |
+|---|---:|---:|
+| `argmax(T,I,F)` | 0.7450 | **0.6650** |
+| `argmax(e,n,c)` baseline | 0.7550 | **0.7550** |
+| difference | −0.0100 | **−0.0900** |
+| McNemar | b=1, c=3, p=0.625 (ns) | **b=1, c=19, p=0.0000** |
+
+Three repairs landed between those columns — `I = max(1-r, n)`, pairwise
+`disagree`, and the calibrated targets — and the gap **widened by a factor of
+nine and became statistically significant**. At Gate A the honest statement was
+"the layer adds nothing measurable". It is now stronger than that: on FEVER the
+layer measurably *destroys* information the NLI head already had. The baseline is
+identical in both columns, as it must be — it is a function of `e`, `n`, `c`
+only, and those are bit-identical across the two dumps.
+
+The mechanism is visible in the per-class table. Recall on the two decidable
+classes falls (T 0.646 → 0.554, F 0.853 → 0.662) while recall on `I` rises
+(0.761 → 0.776), and precision on `I` falls to 0.500. `I = max(1-r, n)` sets a
+floor of `1-r` under indeterminacy, and on FEVER `r` has a median of 0.750, so a
+floor of ~0.25 is imposed on every row regardless of evidence. Where the NLI head
+was confidently right, that floor is enough to let `I` win the argmax. The
+repair that made the mass identity break genuinely is the same repair that costs
+accuracy here, and the two cannot be separated by tuning — they are the same
+term.
+
+This does not retract the Gate B change. `I = max(1-r, n)` was adopted because
+the old `I` made "T+I+F > 1" an algebraic identity, which is a correctness
+problem independent of accuracy. The honest summary is that fixing it revealed
+the decomposition was carrying less information than the headline suggested, not
+more.
+
+**What this does not say.** FEVER supplies gold, annotator-selected evidence at
+constant relevance, with a single passage on 185/200 rows (memo F9). Three of
+`r`'s four components cannot vary there and the conflict term has nothing to
+compare, so this is close to a worst case for the construction — it is the
+corpus least able to reward retrieval-side signal. That is an argument for
+measuring on a corpus with real retrieval depth, not an argument that the number
+here is wrong. The CONFLICTS test was that measurement, and it also came out
+negative.
+
+### The frozen Gate A dump
+
+**`fever_run_200_gateA.csv`** is the per-example dump for the construction
+exactly as submitted at First Review: **constant `r` = 0.9**, **`I = (1-r) + r·n`**,
+and **pooled `disagree` = 2·min(e, c)**. It is retained **unmodified** —
+byte-identical to the file committed as `fever_run_200.csv`, SHA-256
+`70a3a783…84c6b7` — because the retraction of the 0.745 headline rests on it.
+Nothing in this repository should regenerate or overwrite it.
+
+```bash
+python experiments/make_results_table.py --csv fever_run_200_gateA.csv \
+    --out-prefix fever_200_metrics_gateA
+```
+
+| quantity | Gate A value | note |
+|---|---|---|
+| attribution accuracy `argmax(T,I,F)` | 0.7450 ± 0.0308 | the submitted headline; RETRACTED above |
 | baseline accuracy `argmax(e,n,c)` | 0.7550 ± 0.0304 | identical NLI calls |
 | rows where predictions differ | 4 / 200 | |
 | McNemar (exact) | b=1, c=3, p=0.625 | not significant |
-| `N_empty` (memo F3) | **0 / 200** | the leak is live code but fired zero times here |
-| distinct values of `r` (memo F1) | `{0.9}` | `r` is a constant, not a signal |
-| `disagree` (memo F9) | median 0.011, mean 0.027, max 0.717; 9/200 rows > 0.1 | conflict term near-inert on FEVER |
-| evidence passages per row | 185 rows have exactly 1 | so `2·min(e,c)` measures single-passage ambiguity, not cross-source conflict |
-| mass identity deviation (memo F5) | 2.22e-16 | holds to machine precision |
+| distinct values of `r` (memo F1) | `{0.9}` | `r` was a constant, not a signal |
+| mass identity deviation (memo F5) | 2.22e-16 | identity **held** — which is why it was retracted |
 
-> **`fever_run_200.csv` is now partly stale.** Its `claim`, `e`, `n`, `c`, `gold_*`
-> and `evidence_count` columns remain valid (the NLI calls are unchanged), but its
-> `r`, `T`, `I` and `F` columns were computed with the old constant `r = 0.9`.
-> Regenerating it would produce a new headline number, which is downstream of the
-> blocked stop-gate, so it has deliberately **not** been re-run.
+Its `claim`, `e`, `n`, `c`, `gold_*` and `evidence_count` columns are still
+valid and are what every replay experiment (`run_r_ablation.py`,
+`run_sensitivity_sweep.py`) consumes; its `r`, `T`, `I` and `F` columns describe
+the superseded construction and must never be quoted as current.
 
 ### Contamination check (memo F10)
 
@@ -453,53 +544,85 @@ Unresolved, and what would settle it:
 2. Whether `pietrolesci/nli_fever` is byte-identical to the split the model author
    used. It is a community re-host; the model card links no specific split file.
 
-### Pipeline demo — reproduces the report's Section 5(d) screenshot
+### Pipeline demo — the report's Section 5(d) screenshot no longer matches
 
 ```bash
 python experiments/run_pipeline_demo.py --nli real
 ```
 
-Reproduces the screenshot **exactly**: `TIF(T=0.223, I=0.603, F=0.347)`, identical at
-steps 0, 1 and 2, final action **ABSTAIN**, `expansions_used=2`.
+**The screenshot in the submitted report is a historical artefact of the submitted
+code, and this run no longer reproduces it.** Both the triple and the action have
+changed:
 
-Two things this demonstrates, both of which belong in the report:
+| | submitted report (screenshot) | current code (`a79f5ae`) |
+|---|---|---|
+| triple | `TIF(T=0.223, I=0.603, F=0.347)` | `TIF(T=0.209, I=0.603, F=0.663)` |
+| steps | identical at steps 0, 1, 2 | a single step 0 |
+| action | **ABSTAIN** | **SURFACE_CONTRADICTION** |
+| `expansions_used` | 2 | 0 |
 
-- **The flagship case false-negatives (memo F8).** The evidence set was hand-built to
-  show SURFACE_CONTRADICTION — one passage reporting a 30% risk reduction, one
-  reporting no significant reduction — and F = 0.347 falls below `tau_F` = 0.40, so
-  the system abstains instead. The one example built to showcase the core action does
-  not trigger it.
-- **The expansion loop is inert here because the retriever is exhausted, not because
-  the loop is broken.** The demo's toy corpus (3 graph facts, 3 documents) returns the
-  same passages at every hop radius, so the triple cannot move. `tests/test_memo_regressions.py::test_expansion_with_a_real_scorer_changes_the_triple`
-  drives the same policy with a retriever that *does* return new passages, and the
-  triple changes — that test passes.
+**The flip is the memo F8 conflict fix propagating into the full pipeline.** At
+submission, conflict was computed as `2·min(e, c)` on the relevance-weighted *pooled*
+means. The demo retrieves six passages, of which four are filler — a formulary note,
+an approval date, an age-prevalence fact and an off-topic line about the stock market.
+Pooling averaged the one contradicting passage against those four, so `F` fell to
+0.347, below `tau_F` = 0.40, and the system abstained on the single example built to
+showcase SURFACE_CONTRADICTION. Conflict is now the strongest opposition between *any*
+entailing and *any* contradicting passage,
+`disagree = 2·max_{i,j} min(e_i, c_j)`, which is a set-level property and does not
+dilute. `F` rises to 0.663, clears `tau_F`, and the action fires at step 0.
 
-The default (mock NLI) invocation gives a *different* action —
-`TIF(T=0.434, I=0.323, F=0.486)` → SURFACE_CONTRADICTION — so the two backends
-disagree on the flagship example. Quote the `--nli real` run, and say which one you ran.
+That is the mechanism working end to end rather than abstaining, and it is the one
+place in the repository where an audit finding can be seen to change a pipeline
+outcome. Two caveats belong with it:
+
+- **This is one hand-built trace, not a result.** The same F8 fix, measured against
+  external ground truth on the CONFLICTS dataset, made the policy test come out
+  *negative* (see *The CONFLICTS policy test* above). A mechanism firing correctly on
+  an example built to exercise it is not evidence that it fires correctly in general,
+  and this section must not be read as if it were.
+- **`expansions_used` dropped to 0 for a reason unrelated to the fix.** The policy now
+  acts at step 0, so it never enters the expansion loop, which means this trace no
+  longer exercises that loop at all. The loop's behaviour is covered by
+  `tests/test_memo_regressions.py::test_expansion_with_a_real_scorer_changes_the_triple`
+  (the triple moves when the retriever returns new passages) and
+  `::test_expansion_is_inert_when_the_retriever_returns_nothing_new` (it does not when
+  the toy corpus is exhausted — which is what produced the three identical steps in
+  the original screenshot). Both pass.
+
+The mock-NLI invocation now reaches the **same action** by a different route:
+`TIF(T=0.407, I=0.323, F=0.728)` → SURFACE_CONTRADICTION, 0 expansions. At submission
+the two backends disagreed on this example; they no longer do. Still quote the
+`--nli real` run and say which backend you ran, because the triples differ.
 
 ### Library behaviour (offline, mock NLI)
 
 | quantity | value | command |
 |---|---|---|
-| README quickstart triple | `TIF(T=0.082, I=0.100, F=0.909)` | `python experiments/reproduce_all.py` |
+| README quickstart triple | `TIF(T=0.091, I=0.000, F=1.000)` | `python experiments/reproduce_all.py` |
 | README quickstart, with `expand_fn` | ANSWER after 1 expansion | same |
 | README quickstart, without `expand_fn` | ABSTAIN, 0 expansions | same |
 | `MockNLIBackend.predict` sums to 1 | max \|sum − 1\| = 0.00e+00 | `pytest tests/test_memo_regressions.py -k distribution` |
 
 ### demo.py — illustrative only, not a research result
 
-`demo.py` runs the **mock** NLI backend over 12 hand-written examples. Its numbers
-(attribution 0.750, collapse delta +0.083) are a smoke test of the plumbing. They are
-not evidence of anything and should not appear in the report as results.
+`demo.py` runs the **mock** NLI backend over 12 hand-written examples. Its
+attribution figure is **0.833** (n=12) and is a smoke test of the plumbing, not
+evidence of anything; it should not appear in the report as a result.
+
+The fuzzy-collapse delta that this section previously quoted as a number is
+**withdrawn** — see *Retraction 2* above. Merging the gold `I` and `F` classes
+caps the collapsed score at the majority-class prior, so any positive delta is
+arithmetic rather than evidence for the I/F distinction. `demo.py` no longer
+prints it, and `experiments/reproduce_all.py` lists it under `[RETRACTED]` with
+no value, so no command in this repository reproduces it. That is deliberate.
 
 ---
 
 ## Test suite
 
 ```bash
-pytest -q          # 44 passed, 6 skipped, 1 xfailed
+pytest -q          # 98 passed, 6 skipped, 1 xfailed
 NEUTRORAG_TEST_HF=1 pytest tests/test_memo_regressions.py -k hf_backend   # 6 passed (~44s)
 ```
 

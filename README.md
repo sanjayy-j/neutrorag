@@ -64,7 +64,7 @@ separates NeutroRAG from prior selective-prediction / abstention work.
 pip install -e .                          # numpy + networkx (core deps)
 python demo.py                            # FEVER premise check + policy + ablation (offline mock NLI)
 python experiments/run_pipeline_demo.py   # full pipeline: graph + dense retrieval -> trust layer -> response
-pytest -q                                 # 44 passed, 6 skipped, 1 xfailed (see RESULTS.md)
+pytest -q                                 # 98 passed, 6 skipped, 1 xfailed (see RESULTS.md)
 ```
 
 ```python
@@ -77,7 +77,7 @@ policy = NeutroPolicy()
 evidence = [Evidence("Sharks are not mammals; they are fish.", relevance=0.9)]
 decision = policy.run("Sharks are mammals.", evidence, scorer.score)
 print(decision.action, decision.tif)
-# Action.SURFACE_CONTRADICTION TIF(T=0.082, I=0.100, F=0.909)
+# Action.SURFACE_CONTRADICTION TIF(T=0.091, I=0.000, F=1.000)
 
 # High indeterminacy -> EXPAND. The policy can only act on that if you give it
 # an expand_fn; without one it falls straight through to ABSTAIN.
