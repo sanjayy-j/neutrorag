@@ -47,14 +47,14 @@ the numbers differ.
 > score can't tell them apart. So instead of one number, each claim gets three —
 > Truth, Indeterminacy, Falsity — and a five-way policy acts on them."
 
-### 0:30 – 2:00 · The policy choosing different actions
+### 0:30 – 1:40 · The policy choosing different actions
 
 *Command:*
 ```bash
 python experiments/demo_video_run.py
 ```
-*On screen:* four cases scrolling past. Runs in ~10 s, so you will be talking
-over a finished screen — scroll back to each case as you describe it.
+*On screen:* three cases scrolling past. Runs in ~10 s warm, so you will be
+talking over a finished screen — scroll back to each case as you describe it.
 
 **Case 1 — ANSWER.** T=0.991, I=0.007, F=0.003.
 > "Two sources, both entailing. High truth, nothing else. It answers."
@@ -78,13 +78,24 @@ Worth saying plainly:
 > the retriever has nothing new. That staging is the part that distinguishes
 > this from ordinary abstention work."
 
-**Case 4 — r varies.** 0.154 → 0.432 → 0.573.
-> "Retrieval sufficiency. In the first review this was a hardcoded constant for
-> all 200 claims — it wasn't a signal at all. It is now computed from coverage,
-> passage count, source diversity and graph connectivity, and you can see it
-> move as retrieval improves."
+The line above the steps reads `retrieval sufficiency r = 0.750`. Use it to make
+the F1 point verbally, without a fourth case:
+> "That r is retrieval sufficiency, and it's computed — from claim coverage,
+> passage count, source diversity and graph connectivity. In the first review it
+> was hardcoded at 0.9 for all 200 claims, so it wasn't a signal at all. On the
+> FEVER run it now takes 26 distinct values with a median of 0.75."
 
-### 2:00 – 3:15 · The honest result
+If asked to *show* r varying, don't improvise it on camera — point at the
+r-ablation table in `RESULTS.md`, which measures exactly that and reports it
+coming out **negative** (0.665 computed vs 0.755 constant). An earlier fourth
+case swept r across three retrieval states and was cut: it used the CONFLICTS
+saturation targets while cases 1–3 use the library defaults, so the same
+one-passage evidence set printed r = 0.154 there and r = 0.750 here. Both are
+correct and the difference is per-corpus calibration by design, but it is not
+explainable in the ten seconds a demo allows, and a reviewer who spots it will
+spend your remaining time on it.
+
+### 1:40 – 2:55 · The honest result
 
 *On screen:* `RESULTS.md`, the status table and the RETRACTED section.
 
@@ -105,7 +116,7 @@ Worth saying plainly:
 > dataset. That test also came out negative — the action fires more often on the
 > wrong class. That is in RESULTS.md too."
 
-### 3:15 – 4:00 · What that is worth
+### 2:55 – 3:40 · What that is worth
 
 > "So the mechanism works and the evaluation doesn't support the claim yet.
 > The diagnosis is specific: real-world disagreement is hedged — 'some studies
@@ -145,11 +156,12 @@ python -m pytest -q
 | segment | budget |
 |---|---|
 | what the project claims | 0:30 |
-| the four policy cases | 1:30 |
+| the three policy cases | 1:10 |
 | the honest result | 1:15 |
 | what that is worth | 0:45 |
-| **total** | **4:00** |
+| **total** | **3:40** |
 
-Leaves a minute of headroom inside a 5-minute limit. If you need to cut, drop
-Case 4 and say r is computed rather than constant — it is the least visual of
-the four.
+Comfortably inside a 3–5 minute limit, with 1:20 of headroom. The honest-result
+segment is the one that earns the marks, so if you overrun, take the time out of
+the policy cases rather than out of it — Case 1 can be described in a sentence
+without scrolling back to it.

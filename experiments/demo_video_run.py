@@ -11,8 +11,14 @@ Four cases:
   2  two opposed sources      -> SURFACE_CONTRADICTION   (the memo F8 fix)
   3  thin evidence, retrieval -> EXPAND, then ABSTAIN when it finds nothing new
      exhausted
-  4  retrieval sufficiency    -> r varies with the retrieval state
-                                 (a constant r was the original defect, memo F1)
+
+Case 3 prints the retrieval sufficiency r it computed, which is where the memo F1
+fix (r was a hardcoded constant for all 200 FEVER claims) is visible. An earlier
+fourth case swept r across three retrieval states; it was cut because it used the
+CONFLICTS saturation targets while cases 1-3 use the library defaults, so the same
+one-passage evidence set printed two different r values -- correct, but not
+explainable in the time a demo allows. The r distribution is reported properly in
+RESULTS.md.
 
 WHAT THIS IS NOT. No accuracy is reported here and none should be quoted from
 it. These are hand-built cases chosen to exercise each branch of the policy.
@@ -30,7 +36,6 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
 from neutrorag.policy import NeutroPolicy, PolicyConfig  # noqa: E402
-from neutrorag.conflicts import DIVERSITY_TARGET, SUPPORT_TARGET  # noqa: E402
 from neutrorag.scoring import (  # noqa: E402
     Evidence, HFNLIBackend, MockNLIBackend, NLIRetrievalScorer,
 )
@@ -136,34 +141,6 @@ def main() -> None:
     print("      retrieval is exhausted does it abstain. That staging is the")
     print("      difference between 'I don't know' and 'I have looked and")
     print("      still don't know'.")
-
-    # ---- 4. r varies ------------------------------------------------------
-    rule("CASE 4 -- retrieval sufficiency r is a signal, not a constant")
-    print("\n  The first review found r hardcoded at 0.9 for all 200 FEVER claims")
-    print("  (memo F1). It is now computed from the retrieval state alone.\n")
-    claim4 = "Drug X reduces the risk of Condition Y in high-risk patients."
-    states = [
-        ("thin: 1 off-topic passage, 1 source",
-         [Evidence("Condition Y is more common in older populations.", 0.4,
-                   source="epidemiology")]),
-        ("moderate: 2 on-topic passages, 2 sources", ev2),
-        ("rich: 4 on-topic passages, 4 sources",
-         ev2 + [Evidence("Drug X is prescribed to high-risk patients for Condition Y.",
-                         0.7, source="formulary"),
-                Evidence("Condition Y risk in patients taking Drug X was tracked "
-                         "for a decade.", 0.6, source="registry")]),
-    ]
-    print(f"  {'retrieval state':<40} {'r':>6}   components")
-    print("  " + "-" * 68)
-    deep = NLIRetrievalScorer(nli=nli, support_target=SUPPORT_TARGET,
-                              diversity_target=DIVERSITY_TARGET)
-    for label, ev in states:
-        bd = deep.sufficiency(claim4, ev)
-        comps = "  ".join(f"{k}={v:.2f}" for k, v in bd.components.items())
-        print(f"  {label:<40} {bd.r:>6.3f}   {comps}")
-    print("\n  r moves with the retrieval state. Because I = max(1-r, n), thin")
-    print("  retrieval raises indeterminacy on its own -- which is what makes")
-    print("  CASE 3 fire EXPAND rather than answering from one weak passage.")
 
     rule("END")
     print(f"\n  wall-clock: {time.time() - t0:.1f}s")
