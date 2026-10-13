@@ -220,6 +220,21 @@ all real, working, tested code — not mocks. Two things stay honestly scaffolde
 offline, illustrative output; and `graph.py`'s knowledge graph is hand-built and
 in-memory rather than constructed from a real corpus at scale (see the Roadmap).
 
+## Use of AI assistance
+
+This repository is the work of Sanjay J (24BCE2593). AI coding assistants
+(Claude and Claude Code, Anthropic) were used during development for
+implementation support, diagnostic scripts and test authoring, under my
+direction. All design decisions, experimental choices and verification are
+my own, and every reported figure was reproduced by running the committed
+scripts in `experiments/`.
+
+Several defects originating in AI-assisted code — a non-normalised mock NLI
+backend, a hardcoded retrieval constant, and a duplicated formula in a
+verification script — were found on review and are documented in RESULTS.md.
+
+A full declaration appears in Section 12 of the project report.
+
 ## License
 
 MIT.
