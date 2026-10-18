@@ -45,6 +45,79 @@ def mcnemar(a_ok, b_ok):
     return b, c, p
 
 
+def decision_overlap(by_cond, qids, conds):
+    """How often do two gates make the SAME expansion decision?
+
+    A gate fired at the base stage iff it used at least one expansion, so the
+    decision set is recoverable from the committed CSV.
+    """
+    n = len(qids)
+    fired = {c: {q for q in qids
+                 if int(by_cond[c][q]["expansions_used"]) > 0}
+             for c in conds}
+
+    print("\n" + "=" * 78)
+    print("DECISION OVERLAP  (equal rates do not mean equal decisions)")
+    print("=" * 78)
+    A = fired["c_i_gate"]
+    m = len(A)
+    print(f"  (c) I-gate fired on {m}/{n} questions")
+    lo = max(0, 2 * m - n)
+    print(f"  pigeonhole: any gate with the same rate must overlap (c) on at")
+    print(f"  least 2*{m} - {n} = {lo} questions, i.e. >= {100 * lo / m:.1f}% of its")
+    print(f"  firing set. Upper bound is {m} (identical decisions, 100%).\n")
+
+    print(f"  {'gate':24s} {'|A&B|':>7s} {'ovl%':>7s} {'c-only':>7s} "
+          f"{'b-only':>7s} {'agree':>7s} {'eff.n':>6s}")
+    out = {}
+    for c in conds:
+        if c == "c_i_gate" or not c.startswith("b_"):
+            continue
+        B = fired[c]
+        inter = A & B
+        conly, bonly = A - B, B - A
+        # both fired, or neither fired
+        agree = len(inter) + (n - len(A | B))
+        out[c] = dict(inter=len(inter), conly=len(conly), bonly=len(bonly),
+                      agree=agree, disc=sorted(conly | bonly))
+        print(f"  {c:24s} {len(inter):>7d} {100 * len(inter) / m:>6.1f}% "
+              f"{len(conly):>7d} {len(bonly):>7d} {100 * agree / n:>6.1f}% "
+              f"{len(conly) + len(bonly):>6d}")
+    print("\n  c-only / b-only are the discordant decision sets. They are equal in")
+    print("  size by construction, because the firing rates were equalised.")
+    print("  eff.n is the number of questions that can possibly differ: on a")
+    print("  concordant question both conditions run the same pipeline and give")
+    print("  the same answer, contributing a tie and no information.")
+    return fired, out
+
+
+def discordant_outcomes(by_cond, conds, overlap):
+    """EM on the discordant set only -- where the whole signal is."""
+    print("\n" + "=" * 78)
+    print("OUTCOMES ON THE DISCORDANT SET ONLY")
+    print("=" * 78)
+    for c, info in overlap.items():
+        disc = info["disc"]
+        if not disc:
+            print(f"  {c}: discordant set is EMPTY -- the two gates made "
+                  f"identical decisions. No comparison is possible.")
+            continue
+        em_c = statistics.mean(int(by_cond["c_i_gate"][q]["em"]) for q in disc)
+        em_b = statistics.mean(int(by_cond[c][q]["em"]) for q in disc)
+        ok_c = [int(by_cond["c_i_gate"][q]["em"]) == 1 for q in disc]
+        ok_b = [int(by_cond[c][q]["em"]) == 1 for q in disc]
+        b, cc, pv = mcnemar(ok_c, ok_b)
+        _se, lo, hi = wald(em_c, len(disc))
+        print(f"\n  vs {c}   (n_discordant = {len(disc)})")
+        print(f"    (c) I-gate EM {em_c:.4f}  95% CI [{lo:.3f}, {hi:.3f}]")
+        print(f"    (b) scalar  EM {em_b:.4f}")
+        print(f"    difference    {em_c - em_b:+.4f}   McNemar b={b} c={cc} "
+              f"p={pv:.4f}")
+        if len(disc) < 30:
+            print(f"    NOTE: {len(disc)} discordant questions is too few to "
+                  f"resolve a small effect; treat as underpowered.")
+
+
 def main() -> None:
     if not CSV.exists():
         print(f"missing {CSV}; run experiments/run_hotpot_gate.py first")
@@ -76,6 +149,8 @@ def main() -> None:
         print(f"{c:24s} {statistics.mean(1 if u else 0 for u in used):>13.4f} "
               f"{statistics.mean(used):>11.4f} {sum(used):>11d} "
               f"{statistics.mean(ks):>13.2f}")
+
+    fired, overlap = decision_overlap(by_cond, qids, conds)
 
     # ---- headline --------------------------------------------------------
     print("\n" + "=" * 78)
@@ -127,6 +202,8 @@ def main() -> None:
     for t in types:
         qs = [q for q in qids if by_cond[conds[0]][q]["qtype"] == t]
         print(f"    n({t}) = {len(qs)}")
+
+    discordant_outcomes(by_cond, conds, overlap)
 
     # ---- verdict ---------------------------------------------------------
     prim = "b_scalar_max_enc"
