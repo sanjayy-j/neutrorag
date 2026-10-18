@@ -1,0 +1,120 @@
+==============================================================================
+PHASE 3 / RQ3 -- I-gate vs scalar-gate at equal expansion budget
+==============================================================================
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+sample     : 400  seed=20261019  {'bridge': 321, 'comparison': 79}
+k_base     : 3   expansion schedule: [6, 10]
+commit     : 781563c
+Loading weights:   0%|          | 0/202 [00:00<?, ?it/s]Loading weights: 100%|##########| 202/202 [00:00<00:00, 12130.60it/s]
+
+pass 1/2: scoring 400 questions at k=3 ...
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 12547.95it/s]
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|##########| 199/199 [00:00<00:00, 10145.82it/s]
+  25/400  (97s)
+  50/400  (165s)
+  75/400  (241s)
+  100/400  (327s)
+  125/400  (405s)
+  150/400  (478s)
+  175/400  (553s)
+  200/400  (635s)
+  225/400  (713s)
+  250/400  (802s)
+  275/400  (879s)
+  300/400  (961s)
+  325/400  (1037s)
+  350/400  (1116s)
+  375/400  (1196s)
+  400/400  (1284s)
+
+recoverable-miss subset : 222/400 (55.5%)
+top-3 already sufficient : 178/400 (44.5%)
+
+(c) I-GATE expansion rate : 0.7775 (311/400)
+(b) max_enc      threshold 0.8220 -> rate 0.7775 (311/400)  [MATCHED]
+(b) one_minus_n  threshold 0.6965 -> rate 0.7775 (311/400)  [MATCHED]
+(b) entail       threshold 0.3793 -> rate 0.7775 (311/400)  [MATCHED]
+
+pass 2/2: expanding 399 questions that at least one gate fired on ...
+  25/399  (1760s)
+  50/399  (2287s)
+  75/399  (2783s)
+  100/399  (3276s)
+  125/399  (3720s)
+  150/399  (4240s)
+  175/399  (4769s)
+  200/399  (5283s)
+  225/399  (5767s)
+  250/399  (6245s)
+  275/399  (6730s)
+  300/399  (7207s)
+  325/399  (7665s)
+  350/399  (8133s)
+  375/399  (8582s)
+
+==============================================================================
+RESULTS
+==============================================================================
+condition               exp.rate    recov    unnec       EM       F1
+------------------------------------------------------------------------------
+a_fixed_k                 0.0000   0.0000   0.0000   0.2675   0.3636
+c_i_gate                  0.7775   0.7027   0.7865   0.3025   0.4032
+b_scalar_max_enc          0.7775   0.7342   0.7584   0.3225   0.4247
+b_scalar_one_minus_n      0.7775   0.7477   0.7921   0.3075   0.4086
+b_scalar_entail           0.7775   0.8153   0.7247   0.3100   0.4066
+------------------------------------------------------------------------------
+  exp.rate = expansion rate | recov = gold recovered into context on
+  the recoverable-miss subset | unnec = expanded although top-k was
+  already sufficient | EM/F1 = end to end, whole sample
+
+condition                 EM on recoverable-miss subset
+a_fixed_k                    0.1486  95% CI [0.102, 0.195]
+c_i_gate                     0.2432  95% CI [0.187, 0.300]
+b_scalar_max_enc             0.2658  95% CI [0.208, 0.324]
+b_scalar_one_minus_n         0.2658  95% CI [0.208, 0.324]
+b_scalar_entail              0.2703  95% CI [0.212, 0.329]
+
+==============================================================================
+EXACT McNEMAR -- end-to-end EM, whole sample
+==============================================================================
+  c_i_gate vs a_fixed_k            b= 34 c= 20 p=0.0759  no significant difference
+      (b = I-gate right where a_fixed_k wrong; c = the reverse)
+  c_i_gate vs b_scalar_max_enc     b= 14 c= 22 p=0.2430  no significant difference
+      (b = I-gate right where b_scalar_max_enc wrong; c = the reverse)
+  c_i_gate vs b_scalar_one_minus_n b=  6 c=  8 p=0.7905  no significant difference
+      (b = I-gate right where b_scalar_one_minus_n wrong; c = the reverse)
+  c_i_gate vs b_scalar_entail      b=  7 c= 10 p=0.6291  no significant difference
+      (b = I-gate right where b_scalar_entail wrong; c = the reverse)
+
+  Same, restricted to the recoverable-miss subset:
+  c_i_gate vs a_fixed_k            b= 30 c=  9 p=0.0011
+  c_i_gate vs b_scalar_max_enc     b= 12 c= 17 p=0.4583
+  c_i_gate vs b_scalar_one_minus_n b=  3 c=  8 p=0.2266
+  c_i_gate vs b_scalar_entail      b=  4 c= 10 p=0.1796
+
+==============================================================================
+BY QUESTION TYPE -- end-to-end EM
+==============================================================================
+condition                      bridge     comparison
+a_fixed_k                      0.2928         0.1646
+c_i_gate                       0.3489         0.1139
+b_scalar_max_enc               0.3676         0.1392
+b_scalar_one_minus_n           0.3583         0.1013
+b_scalar_entail                0.3583         0.1139
+
+wrote C:\Users\sanja\neutrorag\results\hotpot_gate.csv
+wall-clock: 150.5 min
+
+==============================================================================
+PRE-REGISTERED GATE
+==============================================================================
+  (c) I-GATE EM          : 0.3025
+  (b) SCALAR-GATE EM     : 0.3225  [pre-registered scalar: max(e,n,c)]
+  (a) FIXED-K EM         : 0.2675
+  expansion rates        : c=0.7775  b=0.7775
+  McNemar (c) vs (b)     : b=14 c=22 p=0.2430
+
+  Did (c) beat (b)? NO
+  -> STOP CONDITION FIRED. Conditioning on I adds nothing over
+     conditioning on low confidence generally. Do not proceed to
+     Phases 4-5; do not adjust thresholds.

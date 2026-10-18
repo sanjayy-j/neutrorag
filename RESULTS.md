@@ -169,6 +169,161 @@ SURFACE_CONTRADICTION rate. `connectivity` and `diversity` weights are inert on
 FEVER; at weight 1.0 for either, every *available* component has zero weight and
 `r` falls to 0.
 
+## Phase 3 / RQ3 — the gate FAILED. Pre-registered stop condition fired.
+
+```bash
+python experiments/run_hotpot_gate.py          # N=400, seed 20261019, 150.5 min
+python experiments/analyse_hotpot_gate.py
+```
+
+Pre-registered in [`PREREGISTRATION.md`](PREREGISTRATION.md) as the question that
+decides the project. **The answer is: indeterminacy-triggered expansion recovers
+answers that fixed-`k` misses, and does not beat a scalar-confidence trigger at
+equal expansion budget.** The novelty claim does not survive.
+
+Conditions: identical retriever, identical reader, identical expansion schedule
+(`k = 3 → 6 → 10`). (b) and (c) are computed from the **same per-passage NLI
+outputs**, so the only thing that differs between them is the decision function.
+
+| condition | exp. rate | recovery | unnecessary exp. | **EM** | token-F1 |
+|---|---:|---:|---:|---:|---:|
+| (a) FIXED-k | 0.0000 | 0.0000 | 0.0000 | 0.2675 | 0.3636 |
+| **(c) I-GATE** | 0.7775 | 0.7027 | 0.7865 | **0.3025** | 0.4032 |
+| (b) scalar `max(e,n,c)` | 0.7775 | 0.7342 | 0.7584 | **0.3225** | 0.4247 |
+| (b) scalar `1-n` | 0.7775 | 0.7477 | 0.7921 | **0.3075** | 0.4086 |
+| (b) scalar `e` | 0.7775 | 0.8153 | 0.7247 | **0.3100** | 0.4066 |
+
+Recoverable-miss subset: **222/400 (55.5%)** — five times the pre-registered
+power floor of ~40. Top-3 already sufficient on 178/400 (44.5%).
+
+### RQ3, first half: YES — expansion recovers misses
+
+On the recoverable-miss subset, EM rises from **0.1486** (fixed-`k`) to **0.2432**
+(I-gate), exact McNemar **b=30, c=9, p=0.0011**. Indeterminacy-triggered
+expansion genuinely recovers answers that fixed-`k` retrieval misses, and the
+effect is significant.
+
+### RQ3, second half: NO — and this is the claim
+
+**All three scalar gates beat the I-gate on end-to-end EM.** The I-gate is last
+of the four gated conditions:
+
+| comparison | McNemar | p |
+|---|---|---:|
+| (c) vs (a) FIXED-k, whole sample | b=34, c=20 | 0.0759 |
+| (c) vs (a) FIXED-k, recoverable-miss | **b=30, c=9** | **0.0011** |
+| (c) vs (b) `max(e,n,c)` | b=14, c=22 | 0.2430 |
+| (c) vs (b) `1-n` | b=6, c=8 | 0.7905 |
+| (c) vs (b) `e` | b=7, c=10 | 0.6291 |
+
+No scalar beats the I-gate *significantly*, but the I-gate does not beat any of
+them, and the pre-registered condition was that it must. **Conditioning on `I`
+specifically adds nothing over conditioning on low confidence generally.**
+
+### The null is NOT explained by the two triggers choosing the same questions
+
+This was the obvious alternative reading and it is ruled out. Equal firing rates
+do not imply equal decisions: with `|A| = |B| = 311` of 400, pigeonhole forces
+overlap `≥ 2(311) − 400 = 222`, i.e. **≥ 71.4%** of the firing set, and equal
+rates make the two discordant sets exactly the same size.
+
+| gate | \|A∩B\| | overlap | c-only | b-only | decision agreement | effective n |
+|---|---:|---:|---:|---:|---:|---:|
+| `max(e,n,c)` | 225 | **72.3%** | 86 | 86 | 57.0% | **172** |
+| `e` | 251 | 80.7% | 60 | 60 | 70.0% | 120 |
+| `1-n` | 277 | 89.1% | 34 | 34 | 83.0% | 68 |
+
+`max(e,n,c)` overlaps the I-gate on **72.3%, barely above the 71.4% floor** — its
+decisions are close to maximally different given the rate constraint, on 172
+discordant questions. So the two triggers select substantially *different*
+questions and the scalar still wins. Restricted to the discordant set, where all
+the signal is (a concordant question runs an identical pipeline and returns an
+identical answer, contributing a noise-free tie):
+
+| gate | n_discordant | (c) I-gate EM | (b) scalar EM | difference | McNemar p |
+|---|---:|---:|---:|---:|---:|
+| `max(e,n,c)` | 172 | 0.2674 | 0.2907 | −0.0233 | 0.5847 |
+| `e` | 120 | 0.3083 | 0.3167 | −0.0083 | 1.0000 |
+| `1-n` | 68 | 0.3235 | 0.3382 | −0.0147 | 1.0000 |
+
+The I-gate is behind on every discordant set. This is not an untested
+equivalence; it is a genuine difference in which the decomposition is **not
+better**.
+
+### Addendum 2's prediction is falsified
+
+Registered in advance: *"(c) will beat (b) on recovering gold into context."*
+It did not. The I-gate recovered the **least** gold of all four gated conditions
+— 0.7027 against 0.7342, 0.7477 and 0.8153. The entailment scalar `e` recovered
+the most gold (0.8153), used the **fewest** unnecessary expansions (0.7247) and
+scored higher EM (0.3100). It beats the I-gate on all three axes at once.
+
+### One budget caveat, stated rather than buried
+
+The pre-registered criterion — the fraction of questions that expand at all —
+is matched **exactly**: 0.7775 for every gated condition, 311/400. Total
+expansions are *not* identical, and the I-gate uses **fewer**:
+
+| condition | mean expansions | total | mean final k |
+|---|---:|---:|---:|
+| (c) I-GATE | 1.3550 | **542** | 7.64 |
+| (b) `max(e,n,c)` | 1.4575 | 583 | 8.05 |
+| (b) `1-n` | 1.5075 | 603 | 8.25 |
+| (b) `e` | 1.5275 | 611 | 8.33 |
+
+The I-gate consumes 7–13% less total retrieval, because it stops re-firing
+sooner after expanding. So it is **cheaper and less accurate**, and a reading in
+which the gap narrows at equal *total* consumption cannot be excluded from this
+data. It cannot rescue the claim, though: the `e` scalar beats the I-gate on EM,
+on recovery and on unnecessary expansions simultaneously, and no budget
+adjustment reverses a three-way loss. Per the pre-registration, no threshold was
+touched after calibration.
+
+### Two findings that outlast the verdict
+
+**1. Recovering the evidence is not recovering the answer.** Expansion puts the
+gold paragraph into context 70–82% of the time on the recoverable-miss subset,
+yet EM there reaches only 0.24–0.27. The gate's job is largely being done; the
+reader then fails anyway. An extractive span reader handed more passages has
+more distractors to choose between, so retrieval recovery and answer recovery
+come apart. **This caps what any gating signal can deliver on this pipeline**,
+and it means RQ3's second half was being measured through a lossy downstream
+stage.
+
+**2. Expansion helps bridge questions and hurts comparison questions.**
+
+| condition | bridge (n=321) | comparison (n=79) |
+|---|---|---|
+| (a) FIXED-k | 0.293 [0.24, 0.34] | **0.165** [0.08, 0.25] |
+| (c) I-GATE | 0.349 [0.30, 0.40] | 0.114 [0.04, 0.18] |
+| (b) `max(e,n,c)` | **0.368** [0.31, 0.42] | 0.139 [0.06, 0.22] |
+| (b) `1-n` | 0.358 [0.31, 0.41] | 0.101 [0.03, 0.17] |
+| (b) `e` | 0.358 [0.31, 0.41] | 0.114 [0.04, 0.18] |
+
+Every gated condition improves bridge and **degrades comparison below
+fixed-`k`**. This is consistent with Phase 2: comparison questions already
+retrieve well (R@3 = 0.873), so expansion adds only distractors. The comparison
+arm is underpowered (n=79, with ~30.8% yes/no unreachable by a span reader), so
+the intervals overlap — but the direction is uniform across all four gated
+conditions, which makes it unlikely to be noise.
+
+### What this means for the claim
+
+The narrowed claim registered in Phase 0 was *expansion conditioned on a
+decomposed evidence state, where indeterminacy specifically triggers
+expansion*. The decomposition **selects different questions** from a scalar
+trigger — demonstrably, at 72.3% overlap against a 71.4% floor — and selecting
+them differently does **not** select them better. Against the pre-registered
+stop condition, the claim fails.
+
+What survives is weaker and must be stated as such: **expansion triggered on
+the evidence state beats no expansion** (p=0.0011 on the recoverable-miss
+subset), which is the FLARE/CRAG/Adaptive-RAG result reproduced in a
+training-free setting, not a new one.
+
+**Phases 4 and 5 were not run**, as the pre-registration requires. No threshold,
+weight, lambda or target was adjusted after the verdict.
+
 ## Phase 2: Track B retrieval metrics (HotpotQA distractor)
 
 ```bash
