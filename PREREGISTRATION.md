@@ -255,3 +255,88 @@ A result in which NeutroRAG loses on end-to-end EM while winning on (1) is
 gating signal, not about beating a span reader on answer accuracy. That
 distinction is registered here in advance precisely so it cannot be invented
 later to excuse a bad EM number.
+
+---
+
+## Addendum 1 — a wiring bug in the Phase 3 harness, found before the verdict
+
+**Added 19 October 2026, after a 40-question pilot and before the powered run.**
+Appended rather than edited: nothing above this line has been changed.
+
+### What happened
+
+The Phase 3 harness built its scorer as `NLIRetrievalScorer(nli=nli)`, passing no
+saturation targets and therefore silently inheriting the **library defaults,
+`support_target = 1` and `diversity_target = 1`** — which are *FEVER's* targets,
+derived from FEVER's p75 evidence depth of 1. HotpotQA's depth is 10.
+
+Measured consequence, at the base depth `k = 3` and after full expansion
+`k = 10`:
+
+| saturation targets | r at k=3 | r at k=10 | `1-r` at k=3 |
+|---|---:|---:|---:|
+| (1, 1) — FEVER's, as run in the pilot | 0.907 | 0.942 | **0.093** |
+| (10, 10) — HotpotQA's own depth p75 | 0.441 | 0.942 | **0.559** |
+
+Because `I = max(1-r, n)`, a `1-r` pinned near 0.09 can never be the active
+branch: on the pilot it was the active branch on **3 of 40 rows**, and `n` on the
+other 37. **The retrieval-sufficiency signal was contributing nothing, and
+condition (c) had degenerated into "expand when the NLI head's neutral class
+dominates".** That is not the I-gate; it is a relabelling of one NLI class.
+
+Reporting the pilot's verdict would therefore have been a **false negative
+against a degenerate implementation** — concluding that the decomposition adds
+nothing, on a configuration in which the decomposition was not running.
+
+### Why correcting it is not tuning
+
+Stated explicitly, because the correction follows a pilot in which (c) lost on
+Exact Match (0.300 vs 0.325) and the appearance matters:
+
+1. **Decision 2**, a standing project rule predating this phase, requires
+   saturation targets to be per-corpus and derived from that corpus's **depth
+   distribution only, never from accuracy**.
+2. The depth derivation for HotpotQA was run and committed in
+   `experiments/describe_hotpot.py` at commit **`4a268c1`**, which precedes this
+   pre-registration (`2551e65`) and precedes any accuracy measurement. It
+   printed `paragraph-count p75: 10` and `distinct-source p75: 10`.
+3. So **10 was already derived, from depth alone, and already committed, before
+   any result existed.** Passing (1, 1) was a wiring omission, not a choice.
+4. No accuracy figure was consulted to select the corrected value, and no other
+   frozen parameter is being changed.
+
+The fix restores a pre-derived, pre-committed constant. It is a bug fix.
+
+### What is retained
+
+The voided pilot is **not deleted**. Its numbers are reported in `RESULTS.md`
+labelled as a mis-wired configuration, so a reader can see both the bug and its
+effect. The pilot had no power in any case — every McNemar p-value was 1.0000 at
+n = 40.
+
+### Fresh predictions, registered before the corrected run
+
+With `r` actually varying (0.441 at k=3, rising to 0.942 at k=10), the I-gate is
+no longer equivalent to tracking `n`, so the comparison becomes meaningful. In
+advance:
+
+- **(c) will beat (b) on recovering gold into context.** `1-r` is large exactly
+  when few passages have been retrieved, which is when gold is most likely to be
+  missing. Confidence: moderate.
+- **Whether (c) beats (b) on end-to-end Exact Match is genuinely open, and I
+  expect it may not.** The pilot showed every gated condition scoring at or
+  below FIXED-k on EM (0.300–0.350 against 0.325) while recovering more gold into
+  context. If that dissociation survives, the cause is the reader, not the gate:
+  an extractive span reader given more passages has more distractors to choose
+  between, so recovering the gold paragraph does not entail recovering the
+  answer. Confidence: this dissociation persists, moderate-to-high.
+- **`one_minus_n` remains the baseline that matters**, not the pre-registered
+  `max(e, n, c)`. See the note registered in §5 of `RESULTS.md`: `max(e, n, c)`
+  is *high* for a confidently-neutral passage set and so is structurally blind to
+  the state the I-gate fires on, which makes it a weak baseline. If (c) cannot
+  beat `one_minus_n`, the honest conclusion is that the gate reduces to
+  monitoring neutrality — a scalar — and the claim must be restated accordingly.
+
+**The stop condition is unchanged.** If (c) does not beat (b) at equal budget on
+the corrected run, Phase 3 halts and Phases 4-5 are not run. This addendum buys
+one re-run of a mis-wired harness, not a second chance at a result.
