@@ -340,3 +340,49 @@ advance:
 **The stop condition is unchanged.** If (c) does not beat (b) at equal budget on
 the corrected run, Phase 3 halts and Phases 4-5 are not run. This addendum buys
 one re-run of a mis-wired harness, not a second chance at a result.
+
+---
+
+## Addendum 2 — the two target settings bracket the intended gate
+
+**Added 19 October 2026, before the corrected run. Appended, not edited.**
+
+Measured on 40 questions at the base depth k=3, scoring only (no accuracy, no
+EM):
+
+| saturation targets | median r | I-gate fires | dominant channel counts |
+|---|---:|---:|---|
+| (1, 1) — FEVER's | 0.929 | 52.5% | F:15, T:4, I:21 |
+| (10, 10) — HotpotQA's depth p75 | 0.463 | 75.0% | F:10, **T:0**, I:30 |
+
+Under the corrected, depth-derived targets **`T` is structurally eliminated at
+base depth.** This is algebra, not an empirical accident: `T = r·e ≤ r = 0.463`
+while `I = max(1-r, n) ≥ 1-r = 0.537`, so `T < I` for every possible NLI output.
+The base stage sits inside the memo F12 regime (`r < 0.5 ⇒ I ≥ 1-r > r ≥ T`), and
+the I-gate there reduces to *"fire unless conflict dominates"*.
+
+So the two settings bracket the gate the construction intends, and neither is it:
+
+- at **(1, 1)** all three channels compete but `1-r ≈ 0.07`, so retrieval
+  sufficiency contributes nothing and the gate is the NLI neutral class
+  relabelled;
+- at **(10, 10)** sufficiency contributes strongly but `T` cannot win, so the
+  gate cannot distinguish "well supported" from "insufficiently retrieved".
+
+**This is a structural property of `I = max(1-r, n)`, registered here before the
+verdict so it cannot be offered afterwards as an excuse.** The construction
+requires `r > 0.5` with real variance for all three channels to compete while
+`r` still matters; a target derived from corpus depth does not guarantee that,
+and on HotpotQA it does not deliver it.
+
+**Decision: the corrected run uses (10, 10).** Decision 2 mandates
+depth-derived, per-corpus targets and that value was derived and committed
+before any result; choosing (1, 1) instead *because* it produces a livelier gate
+would be selecting a parameter on the basis of its effect, which is the thing
+the rule forbids. The 40-question (1, 1) pilot is reported alongside as the
+voided comparison.
+
+A firing rate of 75% is high but not degenerate, so the equal-budget
+calibration remains well posed: the scalar gate is calibrated to the same 75%.
+Had the rate been ~100% the comparison would have been void and this phase
+would have halted here instead.
