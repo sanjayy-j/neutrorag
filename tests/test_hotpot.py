@@ -261,3 +261,38 @@ def test_token_f1_both_empty_is_one():
     is also empty is a correct match, not a vacuous one."""
     assert token_f1("", "") == 1.0
     assert token_f1("something", "") == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Decision-2 saturation targets (PREREGISTRATION.md Addendum 1)
+# ---------------------------------------------------------------------------
+def test_hotpot_targets_are_the_depth_derived_values_not_fever_defaults():
+    """Guards the Addendum 1 bug.
+
+    Inheriting the library defaults (1, 1) -- which are FEVER's -- pins r near
+    0.9 at every retrieval depth, so 1-r can never be the active branch of
+    I = max(1-r, n) and the retrieval-sufficiency signal silently vanishes.
+    """
+    from neutrorag.hotpot import DIVERSITY_TARGET, SUPPORT_TARGET
+    from neutrorag.sufficiency import (
+        DEFAULT_DIVERSITY_TARGET, DEFAULT_SUPPORT_TARGET,
+    )
+
+    assert SUPPORT_TARGET == 10
+    assert DIVERSITY_TARGET == 10
+    assert SUPPORT_TARGET != DEFAULT_SUPPORT_TARGET
+    assert DIVERSITY_TARGET != DEFAULT_DIVERSITY_TARGET
+
+
+def test_support_count_does_not_saturate_at_the_base_depth():
+    """The point of the corrected target: at k=3 of a 10-deep corpus the
+    support component must still be climbing, so r can register insufficiency
+    and rise as retrieval expands."""
+    from neutrorag.hotpot import SUPPORT_TARGET
+    from neutrorag.sufficiency import support_count
+
+    at3 = support_count([0.9] * 3, target=SUPPORT_TARGET)
+    at10 = support_count([0.9] * 10, target=SUPPORT_TARGET)
+    assert at3 < 0.5, f"expected an unsaturated component at k=3, got {at3}"
+    assert at10 == 1.0
+    assert at3 < at10

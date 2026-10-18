@@ -56,8 +56,8 @@ sys.path.insert(0, str(REPO))
 
 from neutrorag.core import TIF, clamp  # noqa: E402
 from neutrorag.hotpot import (  # noqa: E402
-    HotpotExample, exact_match, load_hotpot_hf, stratified_sample, token_f1,
-    type_counts,
+    DIVERSITY_TARGET, SUPPORT_TARGET, HotpotExample, exact_match,
+    load_hotpot_hf, stratified_sample, token_f1, type_counts,
 )
 from neutrorag.reader import ExtractiveReader  # noqa: E402
 from neutrorag.retrieval import DenseRetriever, Document  # noqa: E402
@@ -242,7 +242,11 @@ def main() -> None:
     reader = ExtractiveReader()
     nli = HFNLIBackend()
     nli.predict("warm.", "warm.")
-    scorer = NLIRetrievalScorer(nli=nli)
+    # HotpotQA's own depth-derived targets (Decision 2). NOT the library
+    # defaults, which are FEVER's and would pin r near 0.9 at every depth --
+    # see PREREGISTRATION.md Addendum 1.
+    scorer = NLIRetrievalScorer(nli=nli, support_target=SUPPORT_TARGET,
+                                diversity_target=DIVERSITY_TARGET)
 
     # ---- pass 1: base stage for every question -------------------------
     print(f"\npass 1/2: scoring {len(sample)} questions at k={args.k_base} ...")

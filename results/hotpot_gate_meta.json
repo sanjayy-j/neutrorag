@@ -1,0 +1,41 @@
+{
+  "commit": "4b124ea",
+  "n": 40,
+  "k_base": 3,
+  "k_schedule": [
+    6,
+    10
+  ],
+  "seed": 20261019,
+  "rate_c": 0.575,
+  "thresholds": {
+    "max_enc": 0.7218177928712928,
+    "one_minus_n": 0.5160453307487618,
+    "entail": 0.2923443088255664
+  },
+  "n_recoverable": 21,
+  "n_sufficient": 19,
+  "recoverable_qids": [
+    "5ab9bb8355429970cfb8eb8b",
+    "5ab9ddaa5542994dbf019873",
+    "5ae1a8c05542997f29b3c0ec",
+    "5a7ee0d05542994959419a88",
+    "5aba7cfe554299232ef4a2fd",
+    "5ae731c4554299572ea54781",
+    "5ae7f7ec554299540e5a56de",
+    "5ae75eb15542995703ce8bf8",
+    "5ab5ec0a5542997d4ad1f250",
+    "5a86113355429960ec39b618",
+    "5a73024f5542991f9a20c5fc",
+    "5ab5ec2a5542992aa134a3e3",
+    "5a7b581a5542992d025e6815",
+    "5a81df7d55429926c1cdadaa",
+    "5a79d2fe5542994f819ef0c3",
+    "5ac3c10a554299204fd21e33",
+    "5ac4f8705542995c82c4ad8d",
+    "5a74bc1555429929fddd84dd",
+    "5ab467975542991751b4d75f",
+    "5a81ad9855429903bc27b9a3",
+    "5ae237cf5542992decbdcc78"
+  ]
+}

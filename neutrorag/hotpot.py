@@ -53,6 +53,20 @@ MIN_DISTRACTORS = 3
 
 QUESTION_TYPES = ("bridge", "comparison")
 
+# Decision-2 saturation targets for this corpus, derived from its DEPTH
+# DISTRIBUTION ALONE and never from accuracy. experiments/describe_hotpot.py
+# reports p75 = 10 for both paragraph count and distinct sources, measured over
+# the whole validation split; that script was committed at 4a268c1, before the
+# pre-registration and before any accuracy run.
+#
+# These must be passed explicitly. The library defaults are 1/1, which are
+# FEVER's targets, and inheriting them here pins r near 0.9 at every retrieval
+# depth -- which makes 1-r ~ 0.09, so it can never be the active branch of
+# I = max(1-r, n) and the retrieval-sufficiency signal silently disappears.
+# See PREREGISTRATION.md, Addendum 1.
+SUPPORT_TARGET = 10
+DIVERSITY_TARGET = 10
+
 #: Answers that no span reader can produce, because they appear in no passage.
 YES_NO = ("yes", "no")
 

@@ -1,0 +1,14 @@
+==============================================================================
+PHASE 3 / RQ3 -- I-gate vs scalar-gate at equal expansion budget
+==============================================================================
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+sample     : 400  seed=20261019  {'bridge': 321, 'comparison': 79}
+k_base     : 3   expansion schedule: [6, 10]
+commit     : 4b124ea
+Loading weights:   0%|          | 0/202 [00:00<?, ?it/s]Loading weights: 100%|##########| 202/202 [00:00<00:00, 10701.78it/s]
+
+pass 1/2: scoring 400 questions at k=3 ...
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 12337.95it/s]
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|##########| 199/199 [00:00<00:00, 10521.32it/s]
+  25/400  (97s)
+  50/400  (166s)
