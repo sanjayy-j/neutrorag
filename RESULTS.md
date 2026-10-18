@@ -169,6 +169,104 @@ SURFACE_CONTRADICTION rate. `connectivity` and `diversity` weights are inert on
 FEVER; at weight 1.0 for either, every *available* component has zero weight and
 `r` falls to 0.
 
+## RQ1: pairwise `disagree` resists dilution — the proof
+
+Pre-registered as RQ1 in [`PREREGISTRATION.md`](PREREGISTRATION.md). The
+measurement already existed (below); this is the two-direction argument for why
+it comes out that way, which is what makes it a property of the operator rather
+than a fact about one evidence set.
+
+Notation: passages `i = 1..n` with relevance weights `w_i > 0` and per-passage
+NLI outputs `(e_i, n_i, c_i)`. Write `W = Σ w_i`.
+
+### Direction 1 — mean-pooled aggregation is dilution-sensitive by construction
+
+The pooled form first collapses the per-passage outputs to weighted means,
+
+&nbsp;&nbsp;&nbsp;&nbsp;`ē = Σ wᵢeᵢ / W`,&nbsp;&nbsp;`c̄ = Σ wᵢcᵢ / W`,
+
+and then takes `disagree = 2·min(ē, c̄)`.
+
+Add one passage `j` that is neutral: `e_j ≈ 0`, `c_j ≈ 0`, `w_j > 0`. The new
+means are
+
+&nbsp;&nbsp;&nbsp;&nbsp;`ē' = (Σ wᵢeᵢ + w_j e_j) / (W + w_j)`,&nbsp;&nbsp;
+`c̄' = (Σ wᵢcᵢ + w_j c_j) / (W + w_j)`.
+
+The denominator strictly increases by `w_j`. Neither numerator increases, since
+`w_j e_j ≈ 0` and `w_j c_j ≈ 0`. Hence `ē' < ē` and `c̄' < c̄` strictly, provided
+the corresponding numerator was non-zero. `min` is monotone non-decreasing in
+each argument, so
+
+&nbsp;&nbsp;&nbsp;&nbsp;`2·min(ē', c̄') < 2·min(ē, c̄)`.
+
+Every neutral passage added therefore strictly lowers the conflict signal. The
+decay is monotone and unbounded below: adding enough neutral passages drives
+`disagree` to 0 regardless of how sharply two passages contradict each other.
+**This is not a tuning artefact — it is what averaging means.**
+
+### Direction 2 — pairwise aggregation is invariant
+
+The pairwise form never pools. It takes
+
+&nbsp;&nbsp;&nbsp;&nbsp;`disagree = 2 · max_{(i,j)} min(eᵢ, c_j)`
+
+over ordered pairs of distinct passages. Let `M = max_{(i,j)} min(eᵢ, c_j)` over
+the original set.
+
+Adding passage `j*` with `e_{j*} ≈ 0`, `c_{j*} ≈ 0` does two things and only two:
+
+1. **It leaves every existing pair intact.** The pairs `(i,j)` among the original
+   passages are unchanged, because no term in `min(eᵢ, c_j)` depends on any other
+   passage or on `n`. So `M' ≥ M`: the max is taken over a superset.
+2. **The pairs it adds cannot raise the max.** A new pair is either `(j*, j)`,
+   contributing `min(e_{j*}, c_j) ≤ e_{j*} ≈ 0`, or `(i, j*)`, contributing
+   `min(eᵢ, c_{j*}) ≤ c_{j*} ≈ 0`. Both are `≈ 0 ≤ M`. So `M' ≤ max(M, 0) = M`.
+
+Together `M' = M`. The signal is **invariant** to neutral passages, exactly:
+not approximately, and not because of clamping. `max` is the right aggregator
+here precisely because conflict is an **existential** property of a set — "some
+pair disagrees" — whereas a mean answers a **universal** question, "how much
+does the set disagree on average", which is not what the policy needs to know.
+
+### The measurement this predicts
+
+```bash
+python experiments/check_conflict_dilution.py --nli real
+```
+
+| filler passages added | 0 | 1 | 2 | 3 | 4 | spread |
+|---|---:|---:|---:|---:|---:|---:|
+| `disagree` OLD (pooled) | 0.847 | 0.643 | 0.525 | 0.452 | 0.400 | **0.446** |
+| `disagree` NEW (pairwise) | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | **0.000** |
+| raw, unclamped | 1.739 | 1.739 | 1.739 | 1.739 | 1.739 | 0.000 |
+
+Both directions are confirmed. The pooled row decays monotonically, as Direction
+1 requires. The pairwise row is flat, as Direction 2 requires — and the **raw,
+unclamped** row is flat at 1.739 at every filler count, which rules out the one
+alternative explanation: the flatness is genuine invariance, not the clamp at
+1.0 hiding a decay.
+
+### Scope — what this does and does not distinguish
+
+**It does distinguish the operator from mean-pooled NLI aggregation.** That is
+the standard construction in NLI-based RAG verification, and it is SURE-RAG's
+own weak baseline, so the comparison is against a real and current practice
+rather than a straw man.
+
+**It does not distinguish it from Dempster-Shafer methods, and must not be
+claimed to.** In a DS framework a neutral passage contributes a *vacuous* mass
+assignment, and vacuous mass is the **neutral element of the combination rule by
+construction** — so dilution-invariance is automatic there and is not a result.
+EvidentialRAG (arXiv 2607.10491) is such a method. Against ERAG the honest
+statement is that both are dilution-invariant, by different routes, and this
+proof buys nothing. What survives as a distinction is in RQ3, not here.
+
+A second limit: the proof assumes `e_j ≈ 0` *and* `c_j ≈ 0`, i.e. genuinely
+neutral filler. A passage that is partly entailing or partly contradicting is
+not filler, and *should* move the signal. Invariance is claimed only for the
+neutral case.
+
 ## Step 6: pairwise `disagree` — fixes F6 and F8
 
 `scoring.py`: `disagree = 2·min(e, c)` on the pooled means becomes
