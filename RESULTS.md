@@ -169,6 +169,88 @@ SURFACE_CONTRADICTION rate. `connectivity` and `diversity` weights are inert on
 FEVER; at weight 1.0 for either, every *available* component has zero weight and
 `r` falls to 0.
 
+## Phase 2: Track B retrieval metrics (HotpotQA distractor)
+
+```bash
+python experiments/run_hotpot_retrieval.py      # N=400, seed 20261019
+```
+
+Properties of the retriever alone — no reader, no NLI, no policy — so they are
+shared by every condition in Phases 3 and 5 and are reported once. N = 400
+stratified sample (321 bridge / 79 comparison), paragraph-level retrieval with
+`all-MiniLM-L6-v2`. Gold is always exactly 2 paragraphs, so per-instance recall
+takes only the values 0, 0.5 and 1.
+
+| k | Recall@k | 95% CI | context precision@k | sentence recall@k |
+|---:|---:|---:|---:|---:|
+| 1 | 0.4088 | [0.361, 0.457] | 0.8175 | 0.4122 |
+| 2 | 0.6150 | [0.567, 0.663] | 0.6150 | 0.6187 |
+| 3 | 0.7013 | [0.656, 0.746] | 0.4675 | 0.7033 |
+| 5 | 0.8137 | [0.776, 0.852] | 0.3255 | 0.8177 |
+| 10 | 1.0000 | [1.000, 1.000] | 0.2005 | 1.0000 |
+
+**MRR = 0.8904** (first gold paragraph) · **nDCG@10 = 0.8431**
+
+Two of these are not results and must not be read as any:
+
+- **Recall@10 = 1.0 on 400/400 instances is an index-completeness check.** Every
+  paragraph an instance owns is indexed, so retrieving ten of at most ten
+  retrieves the gold necessarily. It confirms the harness indexes what it
+  claims to and says nothing about the retriever.
+- **Context precision@k falls as k grows** (0.8175 → 0.2005) purely because the
+  numerator is capped at 2 gold paragraphs while the denominator is k. It is
+  arithmetic, not degradation.
+
+The informative figures are the middle rows. At k=2 — two retrieved for two gold,
+the fairest single comparison — **both** gold paragraphs are retrieved on only
+**30.0%** of instances, and **neither** on **7.0%**. MRR of 0.8904 against
+Recall@1 of 0.4088 says the retriever reliably puts *one* gold paragraph near the
+top and routinely misses the second, which is the characteristic multi-hop
+failure: the bridge entity is not mentioned in the question.
+
+### Sentence-level recall is reported separately, on purpose
+
+Supporting facts are published per **sentence**; retrieval here operates on
+**paragraphs**. Sentence recall tracks paragraph recall closely (0.6187 vs 0.6150
+at k=2) because gold sentences are concentrated in the gold paragraphs, but the
+two are different quantities and conflating them would overstate what retrieval
+delivered. Both are given at every k.
+
+### By question type
+
+| type | n | R@2 | R@3 | R@5 | MRR | nDCG@10 |
+|---|---:|---:|---:|---:|---:|---:|
+| bridge | 321 | 0.5779 | 0.6589 | 0.7773 | 0.8717 | 0.8217 |
+| comparison | 79 | 0.7658 | 0.8734 | 0.9620 | 0.9662 | 0.9303 |
+
+**Comparison questions are much easier to retrieve for**, by a wide margin at
+every k (R@3 0.873 vs 0.659). The reason is structural: a comparison question
+names both entities explicitly ("Were Scott Derrickson and Ed Wood of the same
+nationality?"), so both gold paragraphs are lexically and semantically close to
+the query. A bridge question names only the first entity and the second must be
+reached through it, so the dense retriever has nothing to match on. This is worth
+stating because the same two types invert on **answering**: comparison questions
+are far easier to retrieve and far harder to answer, 30.8% of them being yes/no
+and unreachable by a span reader.
+
+### A defect this exposed in the retriever
+
+`DenseRetriever.retrieve` returns `Evidence(text, relevance)` and **does not
+propagate the `Document` id**. Document identity is therefore lost at the
+retrieval boundary, which has two consequences:
+
+1. The experiment has to recover each paragraph's title by reverse-mapping its
+   text, which is what `run_hotpot_retrieval.py` does.
+2. More seriously, the scorer receives `sources=None`, so the **`diversity`
+   component of `r` silently degrades** rather than being computed. Combined
+   with `connectivity` being unavailable (no graph is built for HotpotQA), only
+   `coverage` and `support_count` can vary on this corpus — two of four
+   components, against one of four on FEVER.
+
+Phase 3 re-attaches sources explicitly when constructing `Evidence` so the
+component is not silently zeroed. The underlying retriever is left unchanged:
+`retrieval.py` is not modified mid-experiment.
+
 ## RQ1: pairwise `disagree` resists dilution — the proof
 
 Pre-registered as RQ1 in [`PREREGISTRATION.md`](PREREGISTRATION.md). The
