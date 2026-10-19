@@ -763,3 +763,174 @@ the primary, secondary, robustness and uniformity analyses are unchanged.
 from a registered protocol is the failure mode this registration exists to
 prevent. Consequence accepted: as with Phase 3, an arbitrary gate rule cannot
 be replayed offline from this run's output.
+
+---
+
+## Addendum 5 — testing the decomposition under conditions where it can express the judgement
+
+**Registered 19 October 2026, BEFORE the sample was drawn and before any
+measurement on it. Appended, not edited.** The commit carrying this addendum
+contains it and nothing else, and precedes the first commit of the experiment it
+describes.
+
+### Motivation
+
+The Phase 3 refutation tested a **structurally crippled** gate. The diagnosis
+established that `r` was confined to **[0.2000, 0.5333]**, so
+`T = r·e ≤ r < 1-r ≤ I` on every question: *"well supported, do not expand"* was
+**unrepresentable**, and the gate could not decline. Addendum 3(e) named four
+requirements for a successor. This registers one construction that meets them
+and tests the decomposition **for the first time under conditions where it can
+express the judgement an expansion gate needs**.
+
+### The repair — `r_v2`, derived from the diagnosis, not tuned
+
+&nbsp;&nbsp;&nbsp;&nbsp;**`r_v2 = (coverage + support_frac) / 2`**
+
+&nbsp;&nbsp;&nbsp;&nbsp;**`support_frac = |{passages with relevance ≥ floor}| / k`**
+
+Three changes, each tied to a registered requirement:
+
+**(a) `support_frac` is a fraction of what was actually retrieved**, not a count
+against a fixed target. It is therefore **depth-invariant in form**, closing the
+circularity — Addendum 3 requirement 2.
+
+**(b) `diversity` is dropped, not retargeted.** On HotpotQA every paragraph is a
+distinct article, so distinct-sources/k is identically 1.0 at every depth and
+cannot carry information on this corpus; averaging it in only dilutes.
+Retargeting would not help, because the quantity is constant for any target.
+`connectivity` stays dropped — no graph is built.
+
+**(c) The relevance floor is reset so that it binds.** The existing floor of 0.3
+**never bound on any of the 1200 base-depth passages**: `DenseRetriever` remaps
+cosine from [−1, 1] to [0, 1], so `relevance ≥ 0.3` means `cos ≥ −0.4`.
+
+### The floor, fixed now from committed data
+
+Derived by `python experiments/derive_relevance_floor.py`, which reads **no
+accuracy, no label and no gate decision** — a corpus statistic in the same
+category as `describe_hotpot.py` for Decision 2. Reconstructed the Phase 3
+sample from its committed seed (verified: 400/400 qids match) and re-retrieved.
+
+Base depth k=3, **1200 passages**:
+
+| min | Q1 | **median** | Q3 | max | mean | sd |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0.5645 | 0.7244 | **0.7706** | 0.8238 | 0.9433 | 0.7724 | 0.0697 |
+
+&nbsp;&nbsp;&nbsp;&nbsp;**`RELEVANCE_FLOOR_V2 = 0.770580`** — FIXED, not to be adjusted afterwards for any reason.
+
+The old floor of 0.3 was cleared by **100.00%** of those passages; this one by
+exactly **50.00%**, by construction. The base-depth median is used rather than
+the all-paragraph median (0.6905) because Addendum 5 requires `support_frac` to
+*start* near 0.5 with variance in both directions, and base depth is where it is
+first evaluated.
+
+### Depth ladder
+
+**Base k=3, single expansion to k=5.** Maximum depth 5 against a 10-paragraph
+pool, so the pool is **never exhausted** and `gold_in_context` still varies at
+maximum depth (Recall@5 = 0.8137) — Addendum 3 requirement 4. The saturation
+targets are not used by `r_v2` at all.
+
+### Manipulation checks — VOIDING conditions, not results
+
+Confirmed **before** the primary test is interpreted. If either fails, the
+repair did not take and the primary test is **VOID, not negative**.
+
+**(i) `r_v2 > 0.5` on at least 40% of questions at base depth.** This is the
+condition that makes `T` reachable.
+
+**(ii) η² of Δ`r_v2` from `final_k` below 0.30.**
+
+**A defect in check (ii) as first drafted, corrected here before the run.**
+Phase 3's η² = 0.9144 was computed over *expanders only*, stratified across two
+expansion depths {6, 10}. With a **single-rung** ladder there is only one
+expansion depth among expanders, so that form has one stratum, zero
+between-group variance, and would **pass vacuously**. Reporting a vacuous pass
+as evidence the repair took would be exactly the failure this registration
+exists to prevent. So check (ii) is defined precisely as:
+
+> **η² of Δ`r_v2` from `final_k` computed over ALL questions**, with
+> `final_k ∈ {3, 5}` — non-expanders contributing Δ`r_v2` = 0 exactly. This asks
+> "does knowing the final depth tell you how much `r_v2` moved?" and is
+> non-degenerate with a two-rung ladder. Threshold: **< 0.30**.
+
+Because that is not numerically comparable to Phase 3's 0.9144, a **scale-free
+statistic that is** comparable is reported alongside, computed identically in
+both: **|mean Δr| / within-depth sd**. Phase 3's I-gate: **11.40**.
+
+### Hypothesis H2 — directional, registered in advance
+
+> With `T` reachable, **the I-gate beats the best scalar-confidence gate on
+> pooled exact match at equal expansion budget.**
+
+### Design
+
+- **400 questions, stratified by question type**, disjoint from **both** the
+  Phase 3 400 **and** the H1 600. Disjointness asserted against both unions;
+  the run aborts on any overlap. Availability confirmed before registration by
+  parsing only: **6368** instances are disjoint from both and pass the existing
+  eligibility filter (5584 bridge, 784 comparison).
+- **Seed: `20261219`** — fixed here, distinct from `20261019` (Phase 3) and
+  `20261119` (H1).
+- Same five conditions, same equal-budget calibration, same retriever, same
+  reader. **The only changes are `r_v2` and the depth ladder**, both specified
+  above.
+- **PRIMARY:** pooled EM, `c_i_gate` vs `b_scalar_max_enc`, exact McNemar,
+  **one-sided** in the predicted direction, two-sided reported alongside.
+  `max_enc` is primary because it is the condition that **beat** the I-gate in
+  Phase 3 — the comparison that produced the stop condition.
+- **SECONDARY:** the other two scalars, Holm-corrected across the two.
+- **MECHANISTIC SECONDARY — the sharpest prediction.** The I-gate's firing-rate
+  differential by question type should now be **negative**: firing *less* on
+  comparison questions, which retrieve at Recall@3 = 0.8734. Phase 3 gave
+  **+0.0249** with `T` unreachable. If the repair works, this flips sign.
+
+### Projections from committed Phase 3 data — labelled as projections
+
+Computed on the **Phase 3** corpus, which is *not* the sample H2 will be tested
+on, and involving no accuracy. Recorded so the expected behaviour is on the
+page before the run:
+
+| quantity | old `r` | projected `r_v2` |
+|---|---:|---:|
+| mean at base depth | 0.4546 | **0.6103** |
+| variance at base depth | 0.001981 | **0.037169** (19× more) |
+| fraction > 0.5 at base depth | 14.8% | **67.8%** |
+| mean Δ on expanding | **+0.4667** | **−0.0427** |
+| \|mean Δr\| / within-depth sd | **11.40** | **0.527** (21× better) |
+| Δ sign | positive on ~100% | negative 247/400, **positive 90/400** |
+
+So check (i) projects to pass comfortably (67.8% against a 40% threshold), and
+the depth dependence projects to fall by a factor of ~21 while changing sign and
+becoming bidirectional.
+
+**An honest note on ordering.** The floor was fixed by the registered rule — the
+median of the base-depth relevances — and only then were these projections
+computed. The floor is **not** adjusted in light of them, and would not have
+been had they looked unfavourable. They are reported for transparency, not as
+justification.
+
+**A risk registered in advance.** `support_frac` *falls* with depth on this
+corpus (0.5000 at k=3 to 0.3480 at k=5), because deeper passages are less
+relevant, while `coverage` rises (0.7207 to 0.7874) and partly offsets it. Net
+Δ`r_v2` is small and bidirectional. But this is a **new** depth dependence in
+the opposite direction, and if it is stronger on the fresh sample than projected
+here, check (ii) is the guard that should catch it. It is registered as a
+foreseen risk rather than discovered afterwards.
+
+### Reporting rule — binding
+
+- Reported whether H2 is **supported, null, void or reversed**.
+- **No interim analysis.** The `--no-analysis` path from the H1 harness is
+  reused, so no accuracy is computable during the run.
+- Truncation by wall-clock **only**, never by inspecting results; analysed once;
+  realised n reported.
+- No threshold, weight, lambda or floor adjusted at any point.
+
+### What would falsify H2
+
+The I-gate failing to exceed `max_enc` on pooled exact match, or the direction
+reversing. A **void** outcome — either manipulation check failing — is reported
+as void and is **not** evidence either way about the decomposition.
