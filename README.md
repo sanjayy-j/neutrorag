@@ -1,239 +1,142 @@
 # NeutroRAG
 
-**A neutrosophic trust layer for retrieval-augmented generation.**
-NeutroRAG scores every candidate answer with three *independent* signals —
-**Truth (T)**, **Indeterminacy (I)**, and **Falsity (F)** — and acts on each
-differently: it *expands retrieval* when evidence is missing, *surfaces the
-conflict* when sources contradict each other, and *abstains* only when
-indeterminacy is irreducible. A single confidence score can't tell "I found no
-evidence" apart from "I found conflicting evidence" — and so it hallucinates on
-both. NeutroRAG keeps them apart.
+A training-free trust layer for retrieval-augmented generation. Retrieved
+evidence is scored into three independent channels — **T**ruth,
+**I**ndeterminacy, **F**alsity — and a five-way policy acts on them, so that
+*"I found no evidence"* and *"I found evidence that disagrees with itself"*
+trigger different behaviour instead of collapsing into one confidence score.
 
-> Positioning: this is **trustworthy / uncertainty-aware retrieval**. The
-> neutrosophic (T, I, F) formalism is the *mechanism*, not the headline.
+**The central hypothesis was pre-registered and refuted.**
 
-> [!IMPORTANT]
-> **Several claims below are under review following a supervisory code audit.**
-> See [RESULTS.md](RESULTS.md) for what is retracted and why. In short: the 0.745
-> FEVER figure is not attributable to the neutrosophic layer (a raw `argmax(e,n,c)`
-> baseline on the identical NLI calls scores 0.755), the `+0.205` fuzzy-collapse
-> delta is arithmetic rather than an experiment, and `T + I + F = 1 + lambda*disagree`
-> identically -- so the independence framing in the next section does not hold as
-> written. Rewriting it is a pending supervisory decision and has deliberately
-> **not** been done here.
+A gate conditioned on the decomposed evidence state did **not** beat a gate
+conditioned on a single scalar confidence at equal expansion budget. The scalar
+that beat it is **`max(e, n, c)` — the NLI head's own maximum class
+probability**, which this project had registered *in advance* as the weak
+baseline.
 
----
+| HotpotQA distractor, n=400 | pooled EM | comparison EM | fires less where expansion hurts |
+|---|---:|---:|---:|
+| **I-gate (decomposed)** | 0.3025 | 0.1139 | **+0.0249** — fires *more* |
+| **`max(e,n,c)` (scalar)** | **0.3225** | **0.1392** | **−0.1486** |
+| fixed-k, no expansion | 0.2675 | 0.1646 | — |
 
-## Why (T, I, F) and not a probability or a fuzzy score
+Exact McNemar on the primary comparison: b=14, c=22, **p=0.2430** — not
+significant, and in the wrong direction. The registered condition was that the
+decomposed gate must *beat* the scalar. It beat none of three scalars tested.
+**Phases 4 and 5 were not run**, as the pre-registration requires.
 
-In a single-valued neutrosophic set, T, I and F are independent memberships in
-`[0, 1]` that **need not sum to 1**. That is the entire theoretical
-justification for this project: probability and fuzzy membership collapse
-*unsupported* and *contradicted* onto one axis, whereas neutrosophy is the
-minimal formalism that keeps them separate — so `T + I + F` can exceed 1 exactly
-when some sources support a claim and others refute it.
+## Two findings that are positive and significant
 
-```
-r      = retrieval sufficiency in [0,1]          # did we retrieve anything on-topic?
-e,n,c  = relevance-weighted mean NLI             # entailment / neutral / contradiction
-disagree = 2 * min(e, c)                         # high only if support AND conflict co-occur
+1. **Expansion helps on recoverable misses.** On the 222/400 questions where a
+   gold paragraph sits outside the top-k, Exact Match rises **0.1486 → 0.2432**,
+   exact McNemar b=30, c=9, **p=0.0011**. This reproduces FLARE / CRAG /
+   Adaptive-RAG in a training-free setting rather than extending them.
+2. **Lexical coverage outpredicts the retriever's own relevance score.** For
+   whether retrieval actually succeeded, `coverage` reaches Spearman
+   **rho = 0.2232 (p<0.0001)** — and 0.4338 on comparison questions — while the
+   retriever's own `max_relevance` reaches **0.0196 (p=0.6956)**, no measurable
+   relation at all.
 
-T = r * e                        # support needs on-topic evidence that entails
-F = r * c + lambda * disagree    # contradiction from conflict + cross-source disagreement
-I = 1 - r + r * n                # structural (no evidence) + semantic (neutral) doubt
-```
+## Why the gate failed: it reads back its own action
 
-## The decision policy (the core contribution)
+Tracing the null produced the project's most substantial result. On this corpus
+the retrieval-sufficiency term reduces to
 
-| Dominant signal            | Action                    | Why                                             |
-|----------------------------|---------------------------|-------------------------------------------------|
-| High T, low I, low F       | **Answer**                | corroborated                                    |
-| High F (with some T)       | **Surface contradiction** | conflict is *not* fixed by retrieving more      |
-| High I, budget remaining   | **Expand retrieval**      | missing evidence is often *recoverable*         |
-| High I, budget exhausted   | **Abstain**               | indeterminacy is irreducible here               |
-| weak / mixed               | **Hedge**                 | answer with an explicit caveat                  |
+&nbsp;&nbsp;&nbsp;&nbsp;**`r = 0.3333 · coverage + 0.2000`**&nbsp;&nbsp;(max residual **1.11e-16** over 400 questions)
 
-The staged loop — *indeterminacy triggers action, not just refusal* — is what
-separates NeutroRAG from prior selective-prediction / abstention work.
+because two of its three live components have **exactly zero variance** —
+`support_count` and `diversity` are both pinned at 0.3000 — and `connectivity`
+is dropped entirely with no graph. That confines `r` to **[0.2000, 0.5333]**.
 
----
+Expanding retrieval then moves `r` mechanically: at full depth both count-based
+components saturate, so `r = coverage/3 + 0.6667` and **+0.4667 of every
+expansion's gain in `r` is arithmetic**. Retrieval depth alone explains
+**η² = 0.9144** of the I-gate's change in `r`, and the fraction of questions
+with `r > 0.5` goes from **14.8% to 80–81% purely by expanding**. Since
+`T = r·e ≤ r` and `I ≥ 1−r`, the gate `I > T` is pushed toward *true* before
+expanding and toward *false* after — by arithmetic on the depth the gate itself
+chose.
 
-## Quickstart
+> **Design rule.** A sufficiency signal must not be a monotone function of the
+> retrieval depth that the gate reading it controls.
 
-```bash
-pip install -e .                          # numpy + networkx (core deps)
-python demo.py                            # FEVER premise check + policy + ablation (offline mock NLI)
-python experiments/run_pipeline_demo.py   # full pipeline: graph + dense retrieval -> trust layer -> response
-pytest -q                                 # 98 passed, 6 skipped, 1 xfailed (see RESULTS.md)
-```
+Three further requirements for a successor construction — saturation target
+strictly below the candidate pool, `r` kept above 0.5 with real variance, and an
+outcome label that still varies at maximum depth — are in
+[`PREREGISTRATION.md`](PREREGISTRATION.md) Addendum 3(e). **A construction
+satisfying them has not been tested**, so this is a verdict on this construction
+at this operating point, not on decomposed gating in general.
 
-```python
-from neutrorag import Evidence, NeutroPolicy, NLIRetrievalScorer
-
-scorer = NLIRetrievalScorer()          # mock NLI by default (offline)
-policy = NeutroPolicy()
-
-# Contradicted claim -> surface the conflict.
-evidence = [Evidence("Sharks are not mammals; they are fish.", relevance=0.9)]
-decision = policy.run("Sharks are mammals.", evidence, scorer.score)
-print(decision.action, decision.tif)
-# Action.SURFACE_CONTRADICTION TIF(T=0.091, I=0.000, F=1.000)
-
-# High indeterminacy -> EXPAND. The policy can only act on that if you give it
-# an expand_fn; without one it falls straight through to ABSTAIN.
-def expand_fn(claim, evidence, step):
-    """Your retriever goes here -- it must return NEW passages to be useful."""
-    return list(evidence) + [Evidence("The heart is a muscular organ that pumps blood.", 0.9)]
-
-weak = [Evidence("The region has a temperate climate.", relevance=0.3)]
-print(policy.run("The heart pumps blood.", weak, scorer.score, expand_fn).action)
-# Action.ANSWER          (after 1 expansion)
-print(policy.run("The heart pumps blood.", weak, scorer.score).action)
-# Action.ABSTAIN         (no expand_fn -> expansion budget is unusable)
-```
-
-## Project layout
-
-```
-neutrorag/
-  core.py        # TIF triple: independence, confidence, collapse() for the ablation  [frozen]
-  scoring.py     # NLIRetrievalScorer + pluggable NLI backends (Mock / HuggingFace)
-  policy.py      # NeutroPolicy: the five-way staged decision controller              [frozen]
-  eval.py        # risk-coverage, ECE, failure-type attribution, fuzzy-collapse ablation
-  fever.py       # FEVER -> (T,I,F) proof-of-concept (SUPPORTS/REFUTES/NEI == T/F/I)
-  retrieval.py   # DenseRetriever: real sentence-embedding + cosine-similarity retrieval
-  graph.py       # KnowledgeGraph: in-memory multi-hop graph retrieval (networkx)
-  generation.py  # Responder: TemplateResponder (deterministic) / OllamaResponder (real LLM)
-tests/           # unit tests for every module above (offline, no network/model download)
-demo.py                          # trust-layer-only demonstration (offline mock NLI)
-experiments/run_fever_eval.py    # trust layer on real FEVER data + real NLI model
-experiments/run_pipeline_demo.py # the full pipeline: retrieval -> trust layer -> generation
-```
-
-## Wiring in the real components
-
-The core trust layer (`scoring.py` + `policy.py`) is deliberately dependency-light
-and testable in isolation. Everything around it is now real, working code too --
-scoped deliberately for a project at this size rather than left as a placeholder:
-
-- **Real NLI** — `from neutrorag import HFNLIBackend; scorer = NLIRetrievalScorer(nli=HFNLIBackend())`
-  (downloads `DeBERTa-v3-...-mnli-fever-anli` on first `predict()` call, then caches
-  the loaded pipeline; pass `device="cuda"` to use a GPU).
-- **Real FEVER** — replace `fever.load_sample()` with `fever.load_fever_hf()` (HuggingFace
-  Hub, evidence text included inline -- see below) or `fever.load_fever_jsonl(path)` for
-  your own local data.
-- **Retrieval** — `neutrorag.retrieval.DenseRetriever`: real sentence embeddings
-  (`sentence-transformers`, `all-MiniLM-L6-v2` by default) + cosine similarity over an
-  in-memory corpus, producing `Evidence` with genuine relevance scores instead of
-  hand-picked ones.
-- **Graph retrieval ("GraphRAG")** — `neutrorag.graph.KnowledgeGraph`: an in-memory,
-  `networkx`-backed directed graph of (subject, relation, object) facts, each edge
-  carrying the sentence that asserts it, with breadth-first multi-hop retrieval and
-  hop-distance relevance decay. **Scope, stated plainly**: this is in-memory, not
-  Neo4j-backed — a deliberate, permanent design choice at this project's scale, not
-  a stand-in awaiting an upgrade. `KnowledgeGraph.add_fact` / `.retrieve` is the
-  entire integration surface the rest of the system depends on; a Neo4j-backed
-  implementation of that same surface could replace it later without touching
-  `scoring.py` or `policy.py`.
-- **Response generation** — `neutrorag.generation`: `TemplateResponder` (default,
-  deterministic, stdlib-only -- generates the final response per `Action`, so the
-  caveat/conflict structure the policy decided on can't be silently dropped) or
-  `OllamaResponder` (a real call to a locally running [Ollama](https://ollama.com)
-  server's `/api/generate` endpoint, via `urllib` only -- no new dependency; run
-  `ollama serve` and `ollama pull llama3.2` to use it).
-- **`expand_fn`** — the policy's retrieval-expansion callback now has a real thing to
-  call: see `experiments/run_pipeline_demo.py`, where it re-queries both
-  `KnowledgeGraph` (wider hop radius) and `DenseRetriever` (larger *k*) under high
-  indeterminacy.
-
-## Reproducing the FEVER premise check
-
-`demo.py` uses the mock NLI backend and an embedded 12-example sample -- illustrative
-only. For genuine numbers, `experiments/run_fever_eval.py` loads real FEVER claims and
-scores them with a real HuggingFace NLI model:
+## Reproduce everything
 
 ```bash
-pip install -e ".[nli]"     # torch, transformers, datasets
-python experiments/run_fever_eval.py --limit 200
-# optional: --model <hf-model-id> --device cpu|cuda
+pip install -e ".[nli]" && python experiments/reproduce_all.py
 ```
 
-Raw FEVER (Thorne et al., 2018) only records evidence as `(wikipedia_page,
-sentence_id)` pointers, not sentence text, so scoring it means joining against the
-~5M-sentence Wikipedia dump the annotators used. `neutrorag.fever.load_fever_hf`
-sidesteps that by loading
-[`copenlu/fever_gold_evidence`](https://huggingface.co/datasets/copenlu/fever_gold_evidence)
-from the HuggingFace Hub, which bundles each claim with resolved evidence *text*
-inline: gold evidence for SUPPORTS/REFUTES, and a system-retrieved
-topically-related-but-non-confirming sentence for NOT ENOUGH INFO (from the
-adversarial-claims pipeline in Atanasova et al., EMNLP 2020). See the docstring in
-`neutrorag/fever.py` for the exact row format.
-
-## Reproducing the full pipeline (retrieval -> trust layer -> generation)
-
-`experiments/run_pipeline_demo.py` is the one script that runs every stage of the
-architecture end-to-end -- graph + dense retrieval feeding real `Evidence` into the
-trust layer, the staged policy re-retrieving under indeterminacy, and a response
-generator producing the final text:
+That prints every claimed number with the command and commit that produced it,
+offline, and lists retracted figures as `[RETRACTED]` rather than dropping them.
 
 ```bash
-python experiments/run_pipeline_demo.py                            # offline: mock NLI, template response
-python experiments/run_pipeline_demo.py --nli real                 # real DeBERTa-v3 NLI model
-python experiments/run_pipeline_demo.py --nli real --responder ollama --llm-model llama3.2
-python experiments/run_pipeline_demo.py --claim "Your own claim here."
+python -m pytest -q                            # 141 passed, 6 skipped, 3 xfailed
+python experiments/make_claims_manifest.py     # regenerate results/claims.md
 ```
 
-The first run downloads the retrieval embedding model (`all-MiniLM-L6-v2`, ~90MB,
-cached after that). `--responder ollama` requires `ollama serve` running locally
-with the requested model pulled.
+## Where to look
 
-## Evaluation
+| file | what it is |
+|---|---|
+| [`results/claims.md`](results/claims.md) | **authoritative manifest** — all 46 claims, figures, tests, n, regenerating script, and whether pre-registered. Every figure recomputed from the artefacts, none transcribed. |
+| [`PREREGISTRATION.md`](PREREGISTRATION.md) | the four research questions, predictions and stop conditions, registered before the data was seen; three dated addenda recording a wiring bug, a structural limit and the outcome |
+| [`RESULTS.md`](RESULTS.md) | full narrative, every table citing its script, with withdrawn claims collected at the end |
+| [`CITATIONS.md`](CITATIONS.md) | citation audit trail; all 18 post-2023 references verified against publisher records |
+| [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) | runbook for a 3–5 minute recording of the diagnosis |
 
-- **Failure-type attribution** (the distinctive metric): does `argmax(T, I, F)`
-  match the gold SUPPORTS / NEI / REFUTES channel? A collapsed (I+F merged)
-  model *structurally cannot* separate missing-evidence from contradiction.
-- **Selective prediction**: AURC + selective accuracy at fixed coverage.
-- **Calibration**: expected calibration error (ECE).
-- **Fuzzy-collapse ablation** (`eval.fuzzy_collapse_ablation`): full neutrosophic
-  vs. I+F merged — the experiment that justifies the whole design.
+## Read the numbers with these caveats
 
-## Roadmap
+- **Only 9 of 46 claims are pre-registered.** The by-type split, the component
+  diagnostics and the depth analysis were chosen *after* seeing the null. They
+  are the most interesting findings here and they are **exploratory**; p-values
+  are not corrected for that selection.
+- **The reader is extractive**, so Exact Match is capped at **0.938** overall and
+  **0.692** on comparison questions — 458 of 7405 HotpotQA validation answers
+  are yes/no, which no span reader can produce. Never read an EM here against
+  1.0.
+- **Scope** is one retriever (`all-MiniLM-L6-v2`), one reader
+  (`deepset/roberta-base-squad2`), one corpus (HotpotQA distractor validation),
+  n=400, seed 20261019.
+- **Earlier FEVER results are negative and retained**, not removed: the
+  decomposition scores 0.6650 against a bare NLI classifier's 0.7550 on
+  identical model calls (p=0.0000). Three figures from the First Review are
+  **retracted** and listed as such in [`RESULTS.md`](RESULTS.md).
+- The 200 FEVER claims **are** the NLI model's own reported dev split (196/196
+  overlap), so those figures are not held-out.
 
-- [x] **M1–M2** — core library: TIF, scorer, five-way policy, FEVER PoC, tests
-- [x] **M2** — real NLI backend (`HFNLIBackend`) + real FEVER data + real dense/graph
-  retrieval + response generation, wired end-to-end ← *you are here*
-- [ ] **M2.5** — GraphRAG baseline on HotpotQA / 2WikiMultiHopQA (currently the graph
-  is a small hand-built in-memory example, not built from a corpus)
-- [ ] **M3** — full experiments at scale + calibration (`eval.risk_coverage` /
-  `eval.expected_calibration_error` exist but aren't exercised or tested yet)
-- [ ] **M4** — FEVER failure-type attribution at scale + open-source release
-- [ ] **M5** — learned neutrosophic aggregator (ANFIS/MLP) + clinical case study
-- [ ] **M6** — paper + provisional-patent draft + demo dashboard
+## Not measured, not claimed
+
+Faithfulness, citation accuracy, AURC, ECE, Brier, the RQ4 cost comparison
+against a published LLM gate, and RQ2 proper (AUROC of `r` for answerability).
+All were specified for phases that the stop condition prevented. No value for
+any of them appears anywhere in this repository.
 
 ## Status
 
-The trust layer (`scoring.py` + `policy.py`) is the frozen research contribution.
-Around it, retrieval (`retrieval.py`, `graph.py`), real NLI (`HFNLIBackend`), real
-FEVER data (`fever.load_fever_hf`), and response generation (`generation.py`) are
-all real, working, tested code — not mocks. Two things stay honestly scaffolded:
-`demo.py` still runs on the deterministic mock NLI backend by design, for fast,
-offline, illustrative output; and `graph.py`'s knowledge graph is hand-built and
-in-memory rather than constructed from a real corpus at scale (see the Roadmap).
+| milestone | state |
+|---|---|
+| core library: TIF, scorer, five-way policy, tests | done |
+| real NLI backend, real FEVER data, dense + graph retrieval, generation | done |
+| pre-registered HotpotQA gate experiment | done — **hypothesis refuted** |
+| Phases 4–5 (answerability AUROC, selective prediction, cost) | **not run** — stop condition fired |
+| successor construction meeting the four requirements | not attempted |
 
 ## Use of AI assistance
 
-This repository is the work of Sanjay J (24BCE2593). AI coding assistants
-(Claude and Claude Code, Anthropic) were used during development for
-implementation support, diagnostic scripts and test authoring, under my
-direction. All design decisions, experimental choices and verification are
-my own, and every reported figure was reproduced by running the committed
-scripts in `experiments/`.
-
-Several defects originating in AI-assisted code — a non-normalised mock NLI
-backend, a hardcoded retrieval constant, and a duplicated formula in a
-verification script — were found on review and are documented in RESULTS.md.
-
-A full declaration appears in Section 12 of the project report.
+Development of this repository, including code, experiment design review and
+documentation, was assisted by an AI coding assistant. All experiments were run
+locally by the author; every reported figure is regenerated by a committed
+script in `experiments/` and traceable to a commit hash. The author is
+responsible for the content and for the decisions recorded in
+[`PREREGISTRATION.md`](PREREGISTRATION.md). A full declaration appears in
+Section 12 of the project report.
 
 ## License
 
