@@ -748,3 +748,18 @@ Either fixed k=3 **not exceeding** the I-gate on comparison-question exact
 match, or the direction **reversing**. Both outcomes are reported as
 falsification of a registered directional hypothesis, which is a stronger
 result than the original exploratory finding and would retract it.
+
+### Amendment to Addendum 4 — 19 October 2026, recorded before the run
+
+**Dropped from this run:** the per-depth logging registered above, i.e. the
+recording of answer, EM, F1, `gold_in_context`, `r`, `T`, `I` and `F` at *every*
+candidate depth. **Only the depth each condition selects is logged, as in
+Phase 3.** *Why:* scoring every depth unconditionally removes Phase 3's
+depth-skipping and raises the wall-clock estimate from ~3.2 h to ~5 h, and H1
+needs only final-depth exact match per condition. *Scope:* logging only — it
+alters no measurement, no condition, no sample, no threshold and no test, and
+the primary, secondary, robustness and uniformity analyses are unchanged.
+*Recorded before the run rather than after,* because an unrecorded deviation
+from a registered protocol is the failure mode this registration exists to
+prevent. Consequence accepted: as with Phase 3, an arbitrary gate rule cannot
+be replayed offline from this run's output.
