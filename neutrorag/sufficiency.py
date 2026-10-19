@@ -270,3 +270,68 @@ def retrieval_sufficiency(
     return SufficiencyBreakdown(r=max(0.0, min(1.0, r)),
                                 components=components,
                                 weights_used={k: w / total for k, w in active.items()})
+
+# ---------------------------------------------------------------------------
+# r_v2 -- the Addendum 5 repair. A SEPARATE path; nothing above is modified,
+# so every figure already in the report stays reproducible from the same code.
+# ---------------------------------------------------------------------------
+#: Relevance floor for r_v2, fixed in PREREGISTRATION.md Addendum 5 as the
+#: MEDIAN of the 1200 base-depth relevances in the Phase 3 run
+#: (experiments/derive_relevance_floor.py). The legacy floor of 0.3 never bound
+#: on any of those 1200 passages, because DenseRetriever remaps cosine from
+#: [-1, 1] to [0, 1] and so 0.3 means cos >= -0.4. NOT to be adjusted.
+RELEVANCE_FLOOR_V2 = 0.770580
+
+
+def support_frac(relevances: Sequence[float],
+                 floor: float = RELEVANCE_FLOOR_V2) -> float:
+    """Fraction of the RETRIEVED passages that clear the relevance floor.
+
+    The difference from :func:`support_count` is the denominator. ``support_count``
+    divides by a fixed target, so at any fixed k it is the constant ``k/target``
+    and rises mechanically as the gate deepens retrieval -- the circularity
+    measured at eta^2 = 0.9144 in Phase 3. Dividing by the number of passages
+    actually retrieved makes the quantity **depth-invariant in form**: it asks
+    "what proportion of what I fetched was any good?", a question whose answer
+    does not change merely because more was fetched.
+
+    Addendum 5 requirement (a).
+    """
+    rel = list(relevances)
+    if not rel:
+        return 0.0
+    return sum(1 for v in rel if v >= floor) / len(rel)
+
+
+def retrieval_sufficiency_v2(
+    claim: str,
+    passages: Sequence[str],
+    relevances: Sequence[float],
+    floor: float = RELEVANCE_FLOOR_V2,
+) -> SufficiencyBreakdown:
+    """r_v2 = (coverage + support_frac) / 2.
+
+    Two components, equally weighted. ``diversity`` is **dropped, not
+    retargeted**: on HotpotQA every paragraph is a distinct article, so
+    distinct-sources/k is identically 1.0 at every depth and carries no
+    information for any target, and averaging it in only dilutes the
+    components that do. ``connectivity`` stays dropped -- no graph is built.
+    Addendum 5 requirement (b).
+
+    Takes no saturation target: ``r_v2`` does not use one.
+
+    As with :func:`retrieval_sufficiency`, no argument is, or can be derived
+    from, an NLI output.
+    """
+    if not passages:
+        return SufficiencyBreakdown(r=0.0, components={}, weights_used={})
+    comps = {
+        "coverage": coverage(claim, passages),
+        "support_frac": support_frac(relevances, floor=floor),
+    }
+    r = sum(comps.values()) / len(comps)
+    return SufficiencyBreakdown(
+        r=max(0.0, min(1.0, r)),
+        components=comps,
+        weights_used={k: 1.0 / len(comps) for k in comps},
+    )

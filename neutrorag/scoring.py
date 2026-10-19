@@ -64,8 +64,15 @@ from typing import List, Optional, Protocol, Sequence, Tuple
 
 from .core import TIF, clamp
 from .sufficiency import (
-    DEFAULT_DIVERSITY_TARGET, DEFAULT_SUPPORT_TARGET, DEFAULT_WEIGHTS, GraphLike,
-    SufficiencyBreakdown, SufficiencyWeights, retrieval_sufficiency,
+    DEFAULT_DIVERSITY_TARGET,
+    DEFAULT_SUPPORT_TARGET,
+    DEFAULT_WEIGHTS,
+    GraphLike,
+    RELEVANCE_FLOOR_V2,
+    SufficiencyBreakdown,
+    SufficiencyWeights,
+    retrieval_sufficiency,
+    retrieval_sufficiency_v2,
 )
 
 _WORD = re.compile(r"[a-z0-9]+")
@@ -238,6 +245,12 @@ class NLIRetrievalScorer:
     # value. Exists for the r-ablation (r = 0.9 reproduces the pre-Gate-B
     # behaviour exactly); not for production use.
     r_override: Optional[float] = None
+    # Select the Addendum 5 repair, r_v2 = (coverage + support_frac) / 2.
+    # DEFAULT FALSE: every figure already in the report must stay reproducible
+    # from this same code, so the legacy path is untouched and still the
+    # default. See neutrorag.sufficiency.retrieval_sufficiency_v2.
+    use_r_v2: bool = False
+    relevance_floor_v2: float = RELEVANCE_FLOOR_V2
 
     def sufficiency(self, claim: str, evidence: Sequence[Evidence]) -> SufficiencyBreakdown:
         """Compute r and its per-component breakdown for this claim/evidence set.
@@ -249,6 +262,14 @@ class NLIRetrievalScorer:
         if self.r_override is not None:
             return SufficiencyBreakdown(r=clamp(self.r_override),
                                         components={}, weights_used={})
+        if self.use_r_v2:
+            # r_v2 takes no graph, no sources and no saturation target.
+            return retrieval_sufficiency_v2(
+                claim,
+                passages=[e.text for e in usable],
+                relevances=[clamp(e.relevance) for e in usable],
+                floor=self.relevance_floor_v2,
+            )
         sources = [e.source for e in usable]
         return retrieval_sufficiency(
             claim,

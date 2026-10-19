@@ -86,10 +86,16 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--qtype", default=None,
                    help="restrict the pool to one question type")
     p.add_argument("--exclude-csv", default=None,
-                   help="exclude every qid in this CSV and abort if the "
+                   help="comma-separated CSVs whose qids are excluded; aborts if "
                         "resulting sample is not disjoint from it")
     p.add_argument("--out-prefix", default="hotpot_gate",
                    help="basename for the emitted CSV and meta JSON")
+    p.add_argument("--r-v2", action="store_true",
+                   help="use the Addendum 5 repair r_v2 = (coverage + "
+                        "support_frac)/2 instead of the legacy r")
+    p.add_argument("--k-schedule", default=",".join(str(k) for k in K_SCHEDULE),
+                   help="comma-separated expansion depths, e.g. '5' for a "
+                        "single rung")
     p.add_argument("--no-analysis", action="store_true",
                    help="write the CSV and print only counts and elapsed "
                         "time; no accuracy, no tests, no thresholds")
@@ -247,9 +253,14 @@ def main() -> None:
     # ---- Addendum 4: restrict the pool, then enforce disjointness -------
     excluded: set = set()
     if args.exclude_csv:
-        with open(REPO / args.exclude_csv, encoding="utf-8") as fh:
-            excluded = {r["qid"] for r in csv.DictReader(fh)}
-        print(f"excluding  : {len(excluded)} qids from {args.exclude_csv}")
+        # Comma-separated: Addendum 5 requires disjointness from BOTH the
+        # Phase 3 and the H1 samples, so one path is not enough.
+        for part in [x.strip() for x in args.exclude_csv.split(",") if x.strip()]:
+            with open(REPO / part, encoding="utf-8") as fh:
+                got = {r["qid"] for r in csv.DictReader(fh)}
+            excluded |= got
+            print(f"excluding  : {len(got):5d} qids from {part}")
+        print(f"excluding  : {len(excluded)} distinct qids in total")
     pool = [e for e in allex
             if (args.qtype is None or e.qtype == args.qtype)
             and e.qid not in excluded]
@@ -271,13 +282,13 @@ def main() -> None:
                 f"ABORT: sample is NOT disjoint from {args.exclude_csv} -- "
                 f"{len(overlap)} overlapping qid(s), first {sorted(overlap)[:5]}")
         print(f"disjoint   : CONFIRMED, 0 of {len(sample)} sampled qids appear "
-              f"in {args.exclude_csv}")
+              f"in any of [{args.exclude_csv}]")
     if args.qtype:
         wrong = {e.qtype for e in sample} - {args.qtype}
         if wrong:
             raise SystemExit(f"ABORT: sample contains qtype(s) {wrong}")
     print(f"sample     : {len(sample)}  seed={args.seed}  {type_counts(sample)}")
-    print(f"k_base     : {args.k_base}   expansion schedule: {list(K_SCHEDULE)}")
+
     print(f"commit     : {git_commit()}")
 
     reader = ExtractiveReader()
@@ -287,7 +298,12 @@ def main() -> None:
     # defaults, which are FEVER's and would pin r near 0.9 at every depth --
     # see PREREGISTRATION.md Addendum 1.
     scorer = NLIRetrievalScorer(nli=nli, support_target=SUPPORT_TARGET,
-                                diversity_target=DIVERSITY_TARGET)
+                                diversity_target=DIVERSITY_TARGET,
+                                use_r_v2=args.r_v2)
+    ladder = tuple(int(x) for x in args.k_schedule.split(",") if x.strip())
+    print(f"sufficiency: {'r_v2 (Addendum 5)' if args.r_v2 else 'legacy r'}"
+          + (f"   floor {scorer.relevance_floor_v2}" if args.r_v2 else ""))
+    print(f"ladder     : k={args.k_base} -> {list(ladder)}")
 
     # ---- pass 1: base stage for every question -------------------------
     print(f"\npass 1/2: scoring {len(sample)} questions at k={args.k_base} ...")
@@ -350,7 +366,7 @@ def main() -> None:
         ex = next(e for e in sample if e.qid == qid)
         r, title_of = retrievers[qid]
         stages = []
-        for k in K_SCHEDULE:
+        for k in ladder:
             if k > len(ex.paragraphs):
                 break
             stages.append(score_stage(ex, k, r, reader, nli, scorer, title_of))
@@ -416,7 +432,10 @@ def main() -> None:
         w.writerows(rows)
 
     meta = {"commit": git_commit(), "n": n, "k_base": args.k_base,
-            "k_schedule": list(K_SCHEDULE), "seed": args.seed,
+            "k_schedule": list(ladder), "seed": args.seed,
+            "r_v2": bool(args.r_v2),
+            "relevance_floor_v2": (scorer.relevance_floor_v2
+                                   if args.r_v2 else None),
             "rate_c": rate_c, "thresholds": thresholds,
             "n_recoverable": len(recoverable), "n_sufficient": len(sufficient),
             "recoverable_qids": recoverable}
