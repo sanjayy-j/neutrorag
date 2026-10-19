@@ -82,6 +82,17 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--k-base", type=int, default=K_BASE)
     p.add_argument("--outdir", default="results")
     p.add_argument("--cache", default="results/hotpot_gate_cache.jsonl")
+    # -- Addendum 4 (H1) --------------------------------------------------
+    p.add_argument("--qtype", default=None,
+                   help="restrict the pool to one question type")
+    p.add_argument("--exclude-csv", default=None,
+                   help="exclude every qid in this CSV and abort if the "
+                        "resulting sample is not disjoint from it")
+    p.add_argument("--out-prefix", default="hotpot_gate",
+                   help="basename for the emitted CSV and meta JSON")
+    p.add_argument("--no-analysis", action="store_true",
+                   help="write the CSV and print only counts and elapsed "
+                        "time; no accuracy, no tests, no thresholds")
     return p.parse_args()
 
 
@@ -232,9 +243,39 @@ def main() -> None:
     print("=" * 78)
 
     allex = load_hotpot_hf()
-    sample = stratified_sample(allex, args.n, seed=args.seed)
+
+    # ---- Addendum 4: restrict the pool, then enforce disjointness -------
+    excluded: set = set()
+    if args.exclude_csv:
+        with open(REPO / args.exclude_csv, encoding="utf-8") as fh:
+            excluded = {r["qid"] for r in csv.DictReader(fh)}
+        print(f"excluding  : {len(excluded)} qids from {args.exclude_csv}")
+    pool = [e for e in allex
+            if (args.qtype is None or e.qtype == args.qtype)
+            and e.qid not in excluded]
+    if args.qtype or excluded:
+        print(f"pool       : {len(pool)} of {len(allex)} after qtype="
+              f"{args.qtype!r} and exclusion")
+        if len(pool) < args.n:
+            raise SystemExit(
+                f"ABORT: pool has {len(pool)} questions, need {args.n}")
+    sample = stratified_sample(pool, args.n, seed=args.seed)
     if args.limit:
         sample = sample[:args.limit]
+
+    # Assert disjointness LOUDLY rather than trusting the filter above.
+    if excluded:
+        overlap = {e.qid for e in sample} & excluded
+        if overlap:
+            raise SystemExit(
+                f"ABORT: sample is NOT disjoint from {args.exclude_csv} -- "
+                f"{len(overlap)} overlapping qid(s), first {sorted(overlap)[:5]}")
+        print(f"disjoint   : CONFIRMED, 0 of {len(sample)} sampled qids appear "
+              f"in {args.exclude_csv}")
+    if args.qtype:
+        wrong = {e.qtype for e in sample} - {args.qtype}
+        if wrong:
+            raise SystemExit(f"ABORT: sample contains qtype(s) {wrong}")
     print(f"sample     : {len(sample)}  seed={args.seed}  {type_counts(sample)}")
     print(f"k_base     : {args.k_base}   expansion schedule: {list(K_SCHEDULE)}")
     print(f"commit     : {git_commit()}")
@@ -274,6 +315,7 @@ def main() -> None:
           f"({100 * len(recoverable) / n:.1f}%)")
     print(f"top-{args.k_base} already sufficient : {len(sufficient)}/{n} "
           f"({100 * len(sufficient) / n:.1f}%)")
+    # (subset sizes are sample construction, not an outcome)
     if len(recoverable) < 40:
         print("\n*** STOP CONDITION: recoverable-miss subset is under 40 "
               "questions. The comparison has no power. ***")
@@ -281,7 +323,9 @@ def main() -> None:
     # ---- calibrate: (c)'s rate, then (b)'s thresholds -------------------
     i_fire = {q: base[q].i_dominates for q in base}
     rate_c = sum(i_fire.values()) / n
-    print(f"\n(c) I-GATE expansion rate : {rate_c:.4f} ({sum(i_fire.values())}/{n})")
+    if not args.no_analysis:
+        print(f"\n(c) I-GATE expansion rate : {rate_c:.4f} "
+              f"({sum(i_fire.values())}/{n})")
 
     thresholds: Dict[str, float] = {}
     scalar_fire: Dict[str, Dict[str, bool]] = {}
@@ -291,10 +335,11 @@ def main() -> None:
         thresholds[which] = t
         fires = {q: base[q].scalar(which) < t for q in base}
         scalar_fire[which] = fires
-        rate_b = sum(fires.values()) / n
-        flag = "MATCHED" if abs(rate_b - rate_c) <= 0.02 else "MISMATCH"
-        print(f"(b) {which:12s} threshold {t:.4f} -> rate {rate_b:.4f} "
-              f"({sum(fires.values())}/{n})  [{flag}]")
+        if not args.no_analysis:
+            rate_b = sum(fires.values()) / n
+            flag = "MATCHED" if abs(rate_b - rate_c) <= 0.02 else "MISMATCH"
+            print(f"(b) {which:12s} threshold {t:.4f} -> rate {rate_b:.4f} "
+                  f"({sum(fires.values())}/{n})  [{flag}]")
 
     # ---- pass 2: expand where a gate fired ------------------------------
     need = {q for q in base if i_fire[q] or any(scalar_fire[w][q] for w in SCALARS)}
@@ -364,7 +409,7 @@ def main() -> None:
 
     outdir = REPO / args.outdir
     outdir.mkdir(parents=True, exist_ok=True)
-    path = outdir / "hotpot_gate.csv"
+    path = outdir / f"{args.out_prefix}.csv"
     with open(path, "w", encoding="utf-8", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(rows[0]))
         w.writeheader()
@@ -375,8 +420,13 @@ def main() -> None:
             "rate_c": rate_c, "thresholds": thresholds,
             "n_recoverable": len(recoverable), "n_sufficient": len(sufficient),
             "recoverable_qids": recoverable}
-    (outdir / "hotpot_gate_meta.json").write_text(json.dumps(meta, indent=2),
-                                                  encoding="utf-8")
+    (outdir / f"{args.out_prefix}_meta.json").write_text(
+        json.dumps(meta, indent=2), encoding="utf-8")
+
+    if args.no_analysis:
+        print(f"\nno-analysis mode: wrote the CSV and computed no accuracy.")
+        print(f"wall-clock: {(time.time() - t_start) / 60:.1f} min")
+        return
 
     # ---- report ---------------------------------------------------------
     print("\n" + "=" * 78)
