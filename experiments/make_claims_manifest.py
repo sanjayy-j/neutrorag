@@ -384,7 +384,7 @@ def main() -> None:
             if cond in (BASE, "c_i_gate"):
                 continue
             bb, cc = counts(cond)
-            row(f"H2-{cond.replace('b_scalar_', '')}",
+            row(f"H1b-{cond.replace('b_scalar_', '')}",
                 f"PRE-REGISTERED SECONDARY (Addendum 4): {cond} scores ABOVE "
                 "fixed k=3 on fresh comparison questions, reversing Phase 3.",
                 f"EM {hem[cond]:.4f} vs fixed k=3 {hem[BASE]:.4f} "
@@ -483,6 +483,87 @@ def main() -> None:
                 f"{sum(y)} positives of {len(y)}{extra}",
                 test, len(y), "experiments/analyse_rq2_auroc.py", RQ2)
 
+    # ---------------- Addendum 5 / H2 ---------------------------------
+    H2L = "YES (Addendum 5)"
+    h2p = REPO / "results" / "hotpot_gate_h2.csv"
+    if h2p.exists():
+        h2 = list(csv.DictReader(open(h2p, encoding="utf-8")))
+        b2 = defaultdict(dict)
+        for r in h2:
+            b2[r["condition"]][r["qid"]] = r
+        q2 = sorted(b2[BASE])
+        n2 = len(q2)
+        em2 = {c: statistics.mean(int(b2[c][q]["em"]) for q in q2) for c in b2}
+        ok2 = {c: [int(b2[c][q]["em"]) == 1 for q in q2] for c in b2}
+        rb2 = [float(b2[BASE][q]["r"]) for q in q2]
+        over2 = sum(1 for v in rb2 if v > 0.5)
+
+        dr, depth = [], defaultdict(list)
+        for q in q2:
+            d = float(b2["c_i_gate"][q]["r"]) - float(b2[BASE][q]["r"])
+            dr.append(d)
+            depth[int(b2["c_i_gate"][q]["final_k"])].append(d)
+        tot = statistics.pvariance(dr)
+        wi = sum(len(v) * statistics.pvariance(v) for v in depth.values()
+                 if len(v) > 1)
+        nn = sum(len(v) for v in depth.values() if len(v) > 1)
+        eta2 = 1 - (wi / nn) / tot if nn and tot else float("nan")
+
+        row("H2-check1",
+            "PRE-REGISTERED MANIPULATION CHECK (Addendum 5): the r_v2 repair "
+            "makes T reachable -- PASS.",
+            f"r_v2 > 0.5 on {over2}/{n2} = {over2 / n2:.4f} (threshold >= 0.40); "
+            f"base-depth r_v2 mean {statistics.mean(rb2):.4f} var "
+            f"{statistics.pvariance(rb2):.6f} (legacy r: 0.4546, 0.001981)",
+            "voiding condition, not a hypothesis test", n2,
+            "experiments/analyse_h2_rv2.py", H2L)
+        row("H2-check2",
+            "PRE-REGISTERED MANIPULATION CHECK (Addendum 5): the circularity is "
+            "removed -- PASS.",
+            f"eta^2 of delta-r_v2 from final_k over all questions = {eta2:.4f} "
+            f"(threshold < 0.30; Phase 3 was 0.9144). Scale-free comparable "
+            f"statistic |mean dr|/within-depth sd = 0.639 against 11.40",
+            "voiding condition, not a hypothesis test", n2,
+            "experiments/analyse_h2_rv2.py", H2L)
+
+        def mc(a_, b_):
+            bb = sum(1 for x, y in zip(a_, b_) if x and not y)
+            ccc = sum(1 for x, y in zip(a_, b_) if y and not x)
+            return bb, ccc
+
+        bb, ccc = mc(ok2["c_i_gate"], ok2["b_scalar_max_enc"])
+        m = bb + ccc
+        p1 = (min(1.0, sum(math.comb(m, i) for i in range(ccc + 1)) / 2 ** m)
+              if m else 1.0)
+        row("H2",
+            "PRE-REGISTERED PRIMARY (Addendum 5): even with T reachable and the "
+            "circularity removed, the I-gate does NOT beat max(e,n,c) -- H2 "
+            "FALSIFIED, direction reversed.",
+            f"I-gate EM {em2['c_i_gate']:.4f} vs max(e,n,c) "
+            f"{em2['b_scalar_max_enc']:.4f} (difference "
+            f"{em2['c_i_gate'] - em2['b_scalar_max_enc']:+.4f}); expansion rates "
+            f"matched at 0.6750; discordant {m}/{n2}, b={bb} c={ccc}",
+            f"exact ONE-SIDED McNemar p = {p1:.4f} (two-sided "
+            f"{min(1.0, 2 * sum(math.comb(m, i) for i in range(min(bb, ccc) + 1)) / 2 ** m) if m else 1.0:.4f})",
+            n2, "experiments/analyse_h2_rv2.py", H2L)
+
+        qt = {q: b2[BASE][q]["qtype"] for q in q2}
+        def fr(cond, t):
+            qs = [q for q in q2 if qt[q] == t]
+            return (statistics.mean(1 if int(b2[cond][q]["expansions_used"]) else 0
+                                    for q in qs) if qs else float("nan"))
+        row("H2-mech",
+            "PRE-REGISTERED MECHANISTIC SECONDARY (Addendum 5): the I-gate's "
+            "firing differential by question type did NOT flip negative -- it "
+            "went further positive, while max(e,n,c) declines correctly.",
+            f"I-gate bridge {fr('c_i_gate', 'bridge'):.4f} / comparison "
+            f"{fr('c_i_gate', 'comparison'):.4f} = "
+            f"{fr('c_i_gate', 'comparison') - fr('c_i_gate', 'bridge'):+.4f} "
+            f"(Phase 3: +0.0249); max(e,n,c) differential "
+            f"{fr('b_scalar_max_enc', 'comparison') - fr('b_scalar_max_enc', 'bridge'):+.4f}",
+            "descriptive; comparison arm n=49 and noisy, sign was what was "
+            "registered", n2, "experiments/analyse_h2_rv2.py", H2L)
+
     # ---------------- emit --------------------------------------------
     hdr = ("| id | claim (one sentence) | key figures | test & p | n | "
            "regenerating script | pre-registered? |")
@@ -520,6 +601,9 @@ substituted for it. That is a milder form of selection than generating a
 hypothesis from the data -- the quantity, the predictor and the comparator were
 all fixed in advance -- but it is not none, and it is recorded here rather than
 left for a reader to notice.
+
+`YES (Addendum 5)` marks the third registration: the `r_v2` repair, its two
+voiding manipulation checks, and H2. Registered before the sample was drawn.
 
 `NO-POST-HOC` means the analysis was chosen **after** seeing the Phase 3 result.
 That covers the entire by-type split, the r-component diagnostics and the

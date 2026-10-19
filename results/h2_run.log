@@ -1,0 +1,57 @@
+==============================================================================
+PHASE 3 / RQ3 -- I-gate vs scalar-gate at equal expansion budget
+==============================================================================
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+excluding  :   400 qids from results/hotpot_gate.csv
+excluding  :   600 qids from results/hotpot_gate_h1.csv
+excluding  : 1000 distinct qids in total
+pool       : 6405 of 7405 after qtype=None and exclusion
+disjoint   : CONFIRMED, 0 of 400 sampled qids appear in any of [results/hotpot_gate.csv,results/hotpot_gate_h1.csv]
+sample     : 400  seed=20261219  {'bridge': 351, 'comparison': 49}
+commit     : e470f45
+Loading weights:   0%|          | 0/202 [00:00<?, ?it/s]Loading weights: 100%|##########| 202/202 [00:00<00:00, 9412.00it/s]
+sufficiency: r_v2 (Addendum 5)   floor 0.77058
+ladder     : k=3 -> [5]
+
+pass 1/2: scoring 400 questions at k=3 ...
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 4671.07it/s]
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|##########| 199/199 [00:00<00:00, 9491.53it/s]
+  25/400  (112s)
+  50/400  (191s)
+  75/400  (278s)
+  100/400  (361s)
+  125/400  (459s)
+  150/400  (553s)
+  175/400  (634s)
+  200/400  (726s)
+  225/400  (814s)
+  250/400  (894s)
+  275/400  (968s)
+  300/400  (1055s)
+  325/400  (1141s)
+  350/400  (1228s)
+  375/400  (1303s)
+  400/400  (1389s)
+
+recoverable-miss subset : 219/400 (54.8%)
+top-3 already sufficient : 181/400 (45.2%)
+
+pass 2/2: expanding 390 questions that at least one gate fired on ...
+  25/390  (1539s)
+  50/390  (1682s)
+  75/390  (1844s)
+  100/390  (1990s)
+  125/390  (2144s)
+  150/390  (2283s)
+  175/390  (2415s)
+  200/390  (2543s)
+  225/390  (2686s)
+  250/390  (2825s)
+  275/390  (2967s)
+  300/390  (3088s)
+  325/390  (3222s)
+  350/390  (3368s)
+  375/390  (3521s)
+
+no-analysis mode: wrote the CSV and computed no accuracy.
+wall-clock: 59.9 min
