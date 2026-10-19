@@ -339,8 +339,112 @@ def fever_numbers(gatea_path: str, current_path: str) -> None:
               f"BELOW the same baseline (p={p_val:.4f}).")
 
 
+def hotpot_numbers() -> None:
+    """Phase 2 and Phase 3 headline figures, from the committed CSVs."""
+    section("5. HotpotQA: retrieval, and the pre-registered gate experiment")
+
+    ret_p = REPO / "results" / "hotpot_retrieval.csv"
+    gate_p = REPO / "results" / "hotpot_gate.csv"
+    if not ret_p.exists() or not gate_p.exists():
+        print("\n  MISSING results/hotpot_retrieval.csv or results/hotpot_gate.csv")
+        return
+
+    import statistics
+    ret = list(csv.DictReader(open(ret_p, encoding="utf-8")))
+    mean = lambda c, rows: statistics.mean(float(r[c]) for r in rows)  # noqa: E731
+    claim("retrieval: Recall@k, MRR, nDCG@10",
+          "R@1 {:.4f} R@2 {:.4f} R@3 {:.4f} R@5 {:.4f} R@10 {:.4f}; "
+          "MRR {:.4f}; nDCG@10 {:.4f}".format(
+              *[mean(f"recall@{k}", ret) for k in (1, 2, 3, 5, 10)],
+              mean("mrr", ret), mean("ndcg@10", ret)),
+          "python experiments/run_hotpot_retrieval.py",
+          "Recall@10 = 1.0 is an index-completeness check, not a result")
+
+    rows = list(csv.DictReader(open(gate_p, encoding="utf-8")))
+    by = {}
+    for r in rows:
+        by.setdefault(r["condition"], {})[r["qid"]] = r
+    qids = sorted(by["a_fixed_k"])
+    n = len(qids)
+    recov = [q for q in qids if by["a_fixed_k"][q]["in_recoverable"] == "True"]
+    em = {c: statistics.mean(int(by[c][q]["em"]) for q in qids) for c in by}
+
+    claim("PRE-REGISTERED PRIMARY: I-gate vs scalar gate at equal budget",
+          f"EM {em['c_i_gate']:.4f} (I-gate) vs {em['b_scalar_max_enc']:.4f} "
+          f"(max(e,n,c)); difference {em['c_i_gate'] - em['b_scalar_max_enc']:+.4f}",
+          "python experiments/analyse_hotpot_gate.py",
+          "the stop condition FIRED: the decomposed gate did not beat the "
+          "scalar. Phases 4-5 were not run")
+    claim("expansion vs no expansion on the recoverable-miss subset",
+          f"EM {statistics.mean(int(by['a_fixed_k'][q]['em']) for q in recov):.4f}"
+          f" -> {statistics.mean(int(by['c_i_gate'][q]['em']) for q in recov):.4f}"
+          f" over {len(recov)}/{n} questions",
+          "python experiments/analyse_hotpot_gate.py",
+          "the one significant positive result in Phase 3 (p=0.0011)")
+    for c in sorted(em):
+        claim(f"pooled EM, condition {c}", f"{em[c]:.4f}",
+              "python experiments/analyse_hotpot_gate.py",
+              "read against the extractive ceiling of 0.938, never against 1.0")
+
+    diag = REPO / "results" / "r_component_diagnostics.csv"
+    if diag.exists():
+        d = list(csv.DictReader(open(diag, encoding="utf-8")))
+        cov = [float(r["coverage"]) for r in d]
+        rr = [float(r["r"]) for r in d]
+        resid = max(abs(a / 3 + 0.2 - b) for a, b in zip(cov, rr))
+        claim("r reduces to an affine function of coverage alone",
+              f"r = 0.3333*coverage + 0.2000; max residual {resid:.2e} over "
+              f"{len(d)} questions; r confined to [0.2000, 0.5333]",
+              "python experiments/diagnose_r_components.py",
+              "support_count and diversity have exactly zero variance; "
+              "connectivity is dropped (no graph)")
+
+    print("\n  Full manifest of all claims, with tests and pre-registration "
+          "status:\n    results/claims.md "
+          "(python experiments/make_claims_manifest.py)")
+
+
+def run_analyses(with_models: bool) -> None:
+    """Invoke every analysis script, so this file cannot drift from them."""
+    section("6. Analysis scripts -- invoked, not merely cited")
+    fast = [
+        ("Phase 3 gate analysis", "experiments/analyse_hotpot_gate.py"),
+        ("Phase 3 by question type", "experiments/analyse_hotpot_by_type.py"),
+        ("r vs retrieval depth", "experiments/diagnose_r_depth.py"),
+        ("regenerate the claims manifest", "experiments/make_claims_manifest.py"),
+    ]
+    slow = [
+        ("r component diagnostics (~60s: re-embeds the corpus)",
+         "experiments/diagnose_r_components.py"),
+        ("Phase 2 retrieval metrics (~60s: re-embeds the corpus)",
+         "experiments/run_hotpot_retrieval.py"),
+    ]
+    # All six run by default. The two embedding-dependent ones cost about
+    # 60s each, which is acceptable for a reproduce-all and is what makes
+    # "invokes every analysis script" true of the DEFAULT invocation
+    # rather than only of --with-models.
+    todo = fast + slow
+    del with_models
+    print("")
+    print("  six analysers, ~2 min total (two of them re-embed the corpus)")
+    print("")
+    failed = []
+    for label, cmd in todo:
+        r = subprocess.run([sys.executable, cmd], cwd=REPO,
+                           capture_output=True, text=True)
+        status = "ok" if r.returncode == 0 else f"FAILED ({r.returncode})"
+        print(f"  [{status:>10}] {label}")
+        if r.returncode != 0:
+            failed.append(cmd)
+            print("      " + (r.stderr.strip().splitlines() or ["(no stderr)"])[-1])
+    if failed:
+        print(f"\n  {len(failed)} analysis script(s) FAILED: {failed}")
+    else:
+        print(f"\n  all {len(todo)} invoked analysis scripts completed cleanly")
+
+
 def contamination_note() -> None:
-    section("4. Train/test contamination (memo F10) -- requires network")
+    section("7. Train/test contamination (memo F10) -- requires network")
     claim("overlap with FEVER-NLI train split",
           "0 / 196 distinct claims (0.0%), 0 claim-IDs",
           "see experiments/check_contamination.py",
@@ -353,7 +457,7 @@ def contamination_note() -> None:
 
 
 def model_dependent(with_models: bool) -> None:
-    section("5. Model-dependent runs")
+    section("8. Model-dependent runs")
     cmds = [
         ("regenerate fever_run_200_current.csv (~150s CPU)",
          "python experiments/run_fever_eval.py --limit 200 "
@@ -392,6 +496,8 @@ def main() -> None:
     offline_library_numbers()
     demo_numbers()
     fever_numbers(args.gatea_csv, args.current_csv)
+    hotpot_numbers()
+    run_analyses(args.with_models)
     contamination_note()
     model_dependent(args.with_models)
     print("\nSee RESULTS.md for the same numbers with commentary and retractions.\n")
