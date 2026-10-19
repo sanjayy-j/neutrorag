@@ -346,13 +346,106 @@ def main() -> None:
             f"exact McNemar b={bb} c={cc} p={pp:.4f}", len(rows_f),
             "experiments/reproduce_all.py", POST)
 
+    # ---------------- Addendum 4 / H1 ---------------------------------
+    H1 = "YES (Addendum 4)"
+    h1p = REPO / "results" / "hotpot_gate_h1.csv"
+    if h1p.exists():
+        h = list(csv.DictReader(open(h1p, encoding="utf-8")))
+        hb = defaultdict(dict)
+        for r in h:
+            hb[r["condition"]][r["qid"]] = r
+        hq = sorted(hb[BASE])
+        hn = len(hq)
+        hem = {c: statistics.mean(int(hb[c][q]["em"]) for q in hq) for c in hb}
+        hok = {c: [int(hb[c][q]["em"]) == 1 for q in hq] for c in hb}
+
+        def counts(cond):
+            b = sum(1 for g, f in zip(hok[cond], hok[BASE]) if g and not f)
+            c = sum(1 for g, f in zip(hok[cond], hok[BASE]) if f and not g)
+            return b, c
+
+        def one_sided(b, c):
+            m = b + c
+            if m == 0:
+                return 1.0
+            return min(1.0, sum(math.comb(m, i) for i in range(b + 1)) / 2 ** m)
+
+        b, c = counts("c_i_gate")
+        row("H1",
+            "PRE-REGISTERED PRIMARY (Addendum 4): on fresh comparison questions, "
+            "fixed k=3 does NOT significantly beat the I-gate -- H1 NOT supported.",
+            f"fixed k=3 EM {hem[BASE]:.4f} vs I-gate {hem['c_i_gate']:.4f} "
+            f"(difference {hem['c_i_gate'] - hem[BASE]:+.4f}); discordant "
+            f"{b + c}/{hn} ({100 * (b + c) / hn:.2f}%), b={b} c={c}",
+            f"exact ONE-SIDED McNemar p = {one_sided(b, c):.4f}", hn,
+            "experiments/analyse_h1_comparison.py", H1)
+
+        for cond in sorted(hb):
+            if cond in (BASE, "c_i_gate"):
+                continue
+            bb, cc = counts(cond)
+            row(f"H2-{cond.replace('b_scalar_', '')}",
+                f"PRE-REGISTERED SECONDARY (Addendum 4): {cond} scores ABOVE "
+                "fixed k=3 on fresh comparison questions, reversing Phase 3.",
+                f"EM {hem[cond]:.4f} vs fixed k=3 {hem[BASE]:.4f} "
+                f"(difference {hem[cond] - hem[BASE]:+.4f}); b={bb} c={cc}",
+                f"one-sided McNemar p = {one_sided(bb, cc):.4f}, "
+                "Holm-adjusted to 1.0000 across the three secondaries", hn,
+                "experiments/analyse_h1_comparison.py", H1)
+
+        span = [q for q in hq if hb[BASE][q]["gold"].strip().lower()
+                not in ("yes", "no")]
+        sok = {cc: [int(hb[cc][q]["em"]) == 1 for q in span] for cc in hb}
+        sb = sum(1 for g, f in zip(sok["c_i_gate"], sok[BASE]) if g and not f)
+        sc = sum(1 for g, f in zip(sok["c_i_gate"], sok[BASE]) if f and not g)
+        row("H3",
+            "PRE-REGISTERED ROBUSTNESS (Addendum 4): excluding yes/no answers "
+            "does not change the primary conclusion.",
+            f"span-answerable n={len(span)} of {hn} "
+            f"({100 * (hn - len(span)) / hn:.1f}% yes/no excluded); fixed k=3 EM "
+            f"{statistics.mean(int(hb[BASE][q]['em']) for q in span):.4f} vs "
+            f"I-gate {statistics.mean(int(hb['c_i_gate'][q]['em']) for q in span):.4f}; "
+            f"b={sb} c={sc}",
+            f"exact one-sided McNemar p = {one_sided(sb, sc):.4f}", len(span),
+            "experiments/analyse_h1_comparison.py", H1)
+
+        below = [cc for cc in hb if cc != BASE and hem[cc] < hem[BASE]]
+        tb = tc = 0
+        for cond in [cc for cc in hb if cc != BASE]:
+            bb, cc2 = counts(cond)
+            tb += bb
+            tc += cc2
+        row("H4",
+            "PRE-REGISTERED UNIFORMITY (Addendum 4): the Phase 3 uniformity "
+            "claim did NOT replicate -- only one of four gated conditions "
+            "falls below fixed k=3, against four of four in Phase 3.",
+            f"{len(below)}/4 below fixed k=3; pooled b={tb} c={tc} "
+            f"(Phase 3: 4/4 below, pooled b=9 c=24)",
+            "descriptive by design -- the four conditions are heavily "
+            "dependent, so no p-value is computed", hn,
+            "experiments/analyse_h1_comparison.py", H1)
+
+        hrb = [float(hb[BASE][q]["r"]) for q in hq]
+        row("H5",
+            "The r diagnosis REPLICATES on 600 fresh questions: r is still an "
+            "affine function of coverage alone, with both count-based "
+            "components pinned.",
+            f"r = 0.3333*coverage + 0.2000, max residual 1.11e-16 over {hn} "
+            f"questions; support_count and diversity each take 1 distinct value "
+            f"(0.3000); base-depth r mean {statistics.mean(hrb):.4f} "
+            f"(Phase 3: 0.4546), r>0.5 on "
+            f"{sum(1 for v in hrb if v > 0.5)}/{hn} "
+            f"({100 * sum(1 for v in hrb if v > 0.5) / hn:.1f}%)",
+            "algebraic identity, residual at machine precision", hn,
+            "experiments/analyse_h1_comparison.py", H1)
+
     # ---------------- emit --------------------------------------------
     hdr = ("| id | claim (one sentence) | key figures | test & p | n | "
            "regenerating script | pre-registered? |")
     sep = "|---|---|---|---|---:|---|---|"
     body = "\n".join("| " + " | ".join(r) + " |" for r in ROWS)
 
-    nyes = sum(1 for r in ROWS if r[6] == YES)
+    nyes = sum(1 for r in ROWS if r[6].startswith("YES"))
     text = f"""# Claims manifest
 
 **Generated by `python experiments/make_claims_manifest.py` at commit `{C}`.**
@@ -369,6 +462,11 @@ one-line diff on this file is expected and is not a figure changing.
 `YES` means the claim answers a question or tests a prediction recorded in
 [`PREREGISTRATION.md`](../PREREGISTRATION.md) **before the data was seen**: the
 Phase 3 primary comparison, its power condition, and the Addendum 2 prediction.
+
+`YES (Addendum 4)` marks the second registration: Phase 3's exploratory
+comparison-question finding, promoted to a directional hypothesis and tested
+on 600 fresh questions disjoint from the Phase 3 sample. Those rows are
+confirmatory.
 
 `NO-POST-HOC` means the analysis was chosen **after** seeing the Phase 3 result.
 That covers the entire by-type split, the r-component diagnostics and the

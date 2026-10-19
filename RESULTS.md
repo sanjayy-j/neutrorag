@@ -257,6 +257,97 @@ axes at once.
 
 ---
 
+# Part 3b — H1: the comparison-question finding did NOT replicate
+
+*Pre-registered in [`PREREGISTRATION.md`](PREREGISTRATION.md) Addendum 4
+(commit `d250f5f`), amended `5278ee6`, both pushed before the run. Regenerated
+by `python experiments/analyse_h1_comparison.py`. Realised n = 600, seed
+20261119, wall-clock 207.3 min.*
+
+Phase 3's by-type result — every gated condition below fixed k=3 on comparison
+questions — was **exploratory**. It was promoted to a directional hypothesis and
+tested on **600 comparison questions disjoint from the Phase 3 sample**
+(disjointness asserted in code and re-verified at analysis: 0 overlapping qids).
+
+> **H1.** On HotpotQA comparison questions, fixed k=3 retrieval achieves
+> **higher** exact match than indeterminacy-gated adaptive expansion.
+
+## H1 is NOT supported
+
+| condition | EM | 95% CI | token-F1 | Δ vs fixed-k |
+|---|---:|---:|---:|---:|
+| (a) fixed k=3 | 0.1567 | [0.128, 0.186] | 0.2401 | — |
+| (c) **I-GATE** | **0.1533** | [0.125, 0.182] | 0.2306 | **−0.0033** |
+| (b) `max(e,n,c)` | **0.1683** | [0.138, 0.198] | 0.2398 | **+0.0117** |
+| (b) `e` | 0.1600 | [0.131, 0.189] | 0.2376 | +0.0033 |
+| (b) `1-n` | 0.1583 | [0.129, 0.188] | 0.2377 | +0.0017 |
+
+**Primary test** (exact one-sided McNemar, registered direction): discordant
+**42/600 (7.00%)**, b=20 (I-gate only right), c=22 (fixed-k only right),
+**p = 0.4388**. The direction held, but the effect is −0.0033 and the test is
+null.
+
+**Secondary tests**, Holm-corrected across the three: all three scalar gates
+scored **above** fixed k=3, i.e. **the direction reversed** for them. Raw
+one-sided p = 0.6170–0.9061; **all Holm-adjusted to 1.0000**.
+
+**Robustness** (span-answerable only, 411 of 600 after excluding 31.5% yes/no):
+fixed k=3 0.2287 vs I-gate 0.2238, difference −0.0049, same b=20 / c=22,
+**p = 0.4388**. The conclusion does not change.
+
+**Uniformity — the Phase 3 claim collapsed.** Only **1 of 4** gated conditions
+falls below fixed k=3, against **4 of 4** in Phase 3. Pooled across the four:
+**b=88, c=80** — near parity, against Phase 3's b=9, c=24.
+
+## This is winner's curse, and the size of it is the lesson
+
+| | Phase 3 (exploratory, n=79) | H1 (registered, n=600) |
+|---|---:|---:|
+| I-gate Δ vs fixed-k | **−0.0506** | **−0.0033** |
+| conditions below fixed-k | 4 / 4 | **1 / 4** |
+| pooled b / c | 9 / 24 | **88 / 80** |
+| discordant rate | 10.13% | 7.00% |
+
+The effect shrank by a factor of **15**. Addendum 4's power analysis anticipated
+inflation and halved the planning estimate; the true effect was roughly **6%**
+of the observed one, so even n=600 was far short. Detecting a −0.0033 difference
+at a 7% discordant rate and the observed 20/42 split would need on the order of
+**17,000 questions** — no feasible sample for this project.
+
+**What this retracts.** The Phase 3 statement that expansion degrades comparison
+questions below fixed-`k` **does not survive confirmation** and must not be
+carried into the report as a finding. The uniformity across four conditions,
+which was the main reason to take the exploratory result seriously, is the part
+that most clearly failed to replicate — 4/4 became 1/4.
+
+**What survives.** Expansion gives no measurable *benefit* on comparison
+questions either: every difference in the table is within ±0.012 and every test
+is null. The defensible claim is the weaker and more honest one — **on
+comparison questions, adaptive expansion and fixed k=3 are indistinguishable**,
+which is still notable given that expansion roughly triples the retrieval and
+reader work for nothing.
+
+## The mechanistic diagnosis, by contrast, replicated exactly
+
+Registered as a diagnostic rather than a test, and on 600 fresh questions:
+
+| quantity | Phase 3 | H1 (fresh) |
+|---|---|---|
+| `r = 0.3333·coverage + 0.2000` residual | 1.11e-16 | **1.11e-16** |
+| `support_count` distinct values | 1 (pinned 0.3000) | **1 (pinned 0.3000)** |
+| `diversity` distinct values | 1 (pinned 0.3000) | **1 (pinned 0.3000)** |
+| base-depth `r`, mean | 0.4546 | **0.4542** |
+| base-depth `r`, variance | 0.001981 | 0.001971 |
+| `r > 0.5` | 59/400 (14.8%) | 64/600 (10.7%) |
+| I-gate firing rate | 0.7975 (comparison arm) | 0.8550 |
+
+The affine reduction holds to machine precision on an independent sample, with
+both count-based components pinned at exactly 0.3000 and coverage taking 59
+distinct values. **So the structural finding is confirmed while the accuracy
+finding is not** — which is the right way round: the mechanism is a property of
+the construction and replicates, whereas the small accuracy difference was
+sampling noise amplified by selection.
+
 # Part 4 — Deriving the mechanism
 
 *Exploratory from here to the end of Part 5 — chosen after seeing the null.*
@@ -290,6 +381,12 @@ and it has both the best comparison EM and the best pooled EM.
 Every gated condition improves bridge and degrades comparison. Each
 comparison-only test is individually null, but `c > b` in **all four**,
 totalling b=9 against c=24. n=79; direction only.
+
+> **This comparison-question result did not replicate.** It was pre-registered
+> as H1 and tested on 600 fresh questions: the effect shrank from −0.0506 to
+> −0.0033 (p = 0.4388), and the 4/4 uniformity became 1/4. See
+> [Part 3b](#part-3b--h1-the-comparison-question-finding-did-not-replicate).
+> The bridge-side improvement was never separately tested.
 
 ### `r` is one component wearing a four-component costume
 

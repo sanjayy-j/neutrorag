@@ -1,0 +1,71 @@
+==============================================================================
+PHASE 3 / RQ3 -- I-gate vs scalar-gate at equal expansion budget
+==============================================================================
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+excluding  : 400 qids from results/hotpot_gate.csv
+pool       : 1408 of 7405 after qtype='comparison' and exclusion
+disjoint   : CONFIRMED, 0 of 600 sampled qids appear in results/hotpot_gate.csv
+sample     : 600  seed=20261119  {'comparison': 600}
+k_base     : 3   expansion schedule: [6, 10]
+commit     : 9679817
+Loading weights:   0%|          | 0/202 [00:00<?, ?it/s]Loading weights: 100%|##########| 202/202 [00:00<00:00, 5149.29it/s]
+
+pass 1/2: scoring 600 questions at k=3 ...
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 4883.38it/s]
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|##########| 199/199 [00:00<00:00, 4227.68it/s]
+  25/600  (188s)
+  50/600  (297s)
+  75/600  (412s)
+  100/600  (589s)
+  125/600  (742s)
+  150/600  (894s)
+  175/600  (1052s)
+  200/600  (1196s)
+  225/600  (1362s)
+  250/600  (1433s)
+  275/600  (1500s)
+  300/600  (1567s)
+  325/600  (1635s)
+  350/600  (1706s)
+  375/600  (1776s)
+  400/600  (1844s)
+  425/600  (1924s)
+  450/600  (2005s)
+  475/600  (2080s)
+  500/600  (2151s)
+  525/600  (2214s)
+  550/600  (2282s)
+  575/600  (2353s)
+  600/600  (2423s)
+
+recoverable-miss subset : 120/600 (20.0%)
+top-3 already sufficient : 480/600 (80.0%)
+
+pass 2/2: expanding 600 questions that at least one gate fired on ...
+  25/600  (2880s)
+  50/600  (3328s)
+  75/600  (3758s)
+  100/600  (4156s)
+  125/600  (4539s)
+  150/600  (4937s)
+  175/600  (5352s)
+  200/600  (5761s)
+  225/600  (6228s)
+  250/600  (6641s)
+  275/600  (7044s)
+  300/600  (7501s)
+  325/600  (7878s)
+  350/600  (8279s)
+  375/600  (8723s)
+  400/600  (9112s)
+  425/600  (9565s)
+  450/600  (9953s)
+  475/600  (10412s)
+  500/600  (10808s)
+  525/600  (11188s)
+  550/600  (11613s)
+  575/600  (12039s)
+  600/600  (12435s)
+
+no-analysis mode: wrote the CSV and computed no accuracy.
+wall-clock: 207.3 min
