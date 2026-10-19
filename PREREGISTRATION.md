@@ -595,3 +595,156 @@ recorded here is a verdict on this construction at this operating point, not on
 decomposed gating in general — and the asymmetry is worth stating plainly,
 because requirement 3 was violated on 82% of the sample before any evidence was
 consulted.
+
+---
+
+## Addendum 4 — pre-registering the comparison-question finding for confirmation
+
+**Registered 19 October 2026, BEFORE the sample was drawn and before any
+measurement on it. Appended, not edited.** Nothing above this line has changed
+at any point. The commit carrying this addendum precedes the first commit of
+the experiment it describes; that ordering is the evidence that this is a
+registration and not a write-up.
+
+### Motivation
+
+Phase 3's **post-hoc** by-type analysis found every gated condition scoring
+*below* fixed k=3 retrieval on comparison questions. Verified from
+`results/hotpot_gate.csv`:
+
+| condition | comparison EM | Δ vs fixed-k | b | c | discordant | discordant % |
+|---|---:|---:|---:|---:|---:|---:|
+| (a) fixed k=3 | **0.1646** | — | — | — | — | — |
+| (b) `max(e,n,c)` | 0.1392 | −0.0253 | 2 | 4 | 6 | 7.59% |
+| (c) **I-GATE** | 0.1139 | **−0.0506** | 2 | 6 | 8 | 10.13% |
+| (b) `e` | 0.1139 | −0.0506 | 3 | 7 | 10 | 12.66% |
+| (b) `1-n` | 0.1013 | **−0.0633** | 2 | 7 | 9 | 11.39% |
+
+*(b = gated condition right where fixed-k wrong; c = the reverse.)* Totals
+across the four: **b=9 against c=24**. All four fell in the same direction and
+**all four tests were null at n=79** (p = 0.18–0.69).
+
+That analysis was exploratory: the split was chosen after seeing the Phase 3
+null, and `claims.md` marks it `NO-POST-HOC`. **This addendum promotes it to a
+registered hypothesis and tests it on a fresh, disjoint sample.**
+
+### Hypothesis H1 — directional, registered in advance
+
+> **On HotpotQA comparison questions, fixed k=3 retrieval achieves HIGHER
+> exact match than indeterminacy-gated adaptive expansion.**
+
+The direction is registered **because it was already observed** in Phase 3.
+This is therefore a **one-sided confirmation test of a stated direction**, not a
+two-sided exploration, and the one-sidedness is declared here rather than
+chosen after seeing the new data.
+
+### Mechanism, stated in advance and not fitted afterwards
+
+Two measured facts from Phase 3 predict H1 without reference to the new data:
+
+1. **Comparison questions already retrieve well.** Recall@3 = **0.8734** against
+   bridge's **0.6589**. Expansion therefore adds distractor passages to a
+   context that already contains the gold, and an extractive reader given more
+   distractors has more wrong spans to choose between.
+2. **No gate can decline to expand on them.** `r = 0.3333·coverage + 0.2000` is
+   capped at **0.5333** and sits below 0.5 on 82% of questions, so
+   `T = r·e ≤ r < 1-r ≤ I` and *"well supported, do not expand"* is
+   **unrepresentable**. The I-gate consequently fired on comparison questions at
+   0.7975, *more* often than on bridge (0.7726).
+
+If H1 holds on fresh data, the mechanism above is the reason offered; the test
+does not itself discriminate between that mechanism and others.
+
+### Design
+
+**Sample.** 600 comparison-type questions from HotpotQA distractor validation,
+**disjoint from all 400 qids used in Phase 3**. Disjointness is asserted in code
+and the run **fails loudly** if it does not hold. Availability confirmed before
+registration, by parsing only: 1487 comparison questions exist, 1408 are
+disjoint from Phase 3, and **1384** are disjoint *and* pass the existing
+`eligible_for_unanswerable` sampling filter, so 600 is drawable with margin.
+
+**Seed: `20261119`** — fixed here, distinct from Phase 3's `20261019`.
+
+**Conditions: the same five as Phase 3, unchanged** — `a_fixed_k`,
+`b_scalar_entail`, `b_scalar_max_enc`, `b_scalar_one_minus_n`, `c_i_gate`. Same
+depth ladder {3, 6, 10}, same saturation targets (support=diversity=10), same
+retriever (`all-MiniLM-L6-v2`), same reader (`deepset/roberta-base-squad2`),
+same equal-budget calibration procedure (each scalar threshold set to the
+quantile of its own score distribution on *this* sample that reproduces the
+I-gate's firing rate — in-sample, exactly as in Phase 3). **Nothing changes
+except the sample.** Changing two things at once would make the result
+uninterpretable against Phase 3.
+
+**Primary test.** Exact McNemar, `a_fixed_k` vs `c_i_gate`, **one-sided in the
+registered direction**. `c_i_gate` is primary **because it is the project's own
+construction**, not because it showed the largest Phase 3 effect — it did not.
+`1-n` showed the largest at −0.0633; the I-gate is mid-range at −0.0506, tied
+with `e`.
+
+A clarification registered now so it cannot be confused later: this primary
+comparison is **not** an equal-budget comparison. `a_fixed_k` never expands, so
+its expansion budget is zero. H1 asks whether expanding *at all* hurts on
+comparison questions, which is a different question from Phase 3's primary
+(I-gate vs scalar at matched budget). Both are reported.
+
+**Secondary tests.** The same one-sided McNemar for the other three gated
+conditions against `a_fixed_k`, **Holm-corrected across those three** at family
+α = 0.05.
+
+**Uniformity claim, pre-specified.** That all four gated conditions fall below
+fixed-k in EM. This is reported as a **descriptive** count plus the pooled b/c
+totals, **not** as a p-value: the four conditions share a reader, a retriever
+and most of their decisions, so they are heavily dependent and a combined test
+would overstate the evidence.
+
+**Pre-specified robustness check.** The primary test repeated on
+**span-answerable questions only**. Yes/no answers cap extractive EM at zero and
+contribute only concordant ties, which dilutes the discordant count without
+carrying information. ~30.9% of the eligible comparison pool is yes/no, so
+roughly **415 of 600** are expected to be span-answerable.
+
+**Diagnostics logged for replication on fresh data** (not hypothesis tests): the
+four firing rates, the `r` distribution at base depth, and whether
+`r = 0.3333·coverage + 0.2000` still holds with its residual.
+
+**Harness change, logging only.** Phase 3 recorded only the depth each condition
+selected, so no gate rule could be replayed offline. This run records answer,
+EM, F1, `gold_in_context`, `r`, `T`, `I`, `F` at **every** candidate depth. This
+adds logging and changes no measurement.
+
+### Power
+
+Phase 3 gave **8 discordant pairs of 79** for I-gate vs fixed-k (**10.13%**),
+split b=2, c=6. Projected to n=600 — arithmetic verified before registration:
+
+| assumption | discordant | b | c | z | one-sided p |
+|---|---:|---:|---:|---:|---:|
+| observed share, b/(b+c) = 0.25 | ~60.8 | ~15.2 | ~45.6 | **3.90** | <0.0001 |
+| halved for winner's curse, 0.375 | ~60.8 | ~22.8 | ~38.0 | **1.95** | **0.0257** |
+
+The effect was selected *after* being observed, so it is probably inflated;
+the honest planning figure is the second row. Significance at one-sided 0.05
+requires the gated condition to win fewer than **39.4%** of discordant pairs.
+Phase 3 observed **25%**. **n=600 is adequate under both assumptions**, and
+under-powered only if the true share exceeds ~0.39, i.e. if the Phase 3 effect
+was more than half winner's curse.
+
+### Reporting rule — binding
+
+- The outcome is reported in `RESULTS.md` and in the report **whether H1 is
+  supported, null, or reversed**.
+- **No interim analysis at any point.** No accuracy, EM, F1 or test statistic is
+  computed or printed until the run is complete. The run writes per-question
+  rows; the analysis is a separate pass invoked once.
+- If wall-clock forces truncation, the analysis runs **once** on all completed
+  questions. Truncation is **by time only** and never by inspecting results, and
+  the **realised n is reported**.
+- No threshold, weight, lambda or saturation target is adjusted at any point.
+
+### What would falsify H1
+
+Either fixed k=3 **not exceeding** the I-gate on comparison-question exact
+match, or the direction **reversing**. Both outcomes are reported as
+falsification of a registered directional hypothesis, which is a stronger
+result than the original exploratory finding and would retract it.
