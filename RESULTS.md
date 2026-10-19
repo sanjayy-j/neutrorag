@@ -307,6 +307,78 @@ arm is underpowered (n=79, with ~30.8% yes/no unreachable by a span reader), so
 the intervals overlap — but the direction is uniform across all four gated
 conditions, which makes it unlikely to be noise.
 
+### Why the gate cannot decline: `r` does not distinguish the two types
+
+```bash
+python experiments/analyse_hotpot_by_type.py     # groupby, no re-run
+```
+
+Phase 2 established that comparison questions already retrieve well
+(Recall@3 = 0.873 against bridge's 0.659) and Phase 3 that expansion **degrades**
+comparison below fixed-`k`. A working gate would therefore fire *less* on
+comparison. The I-gate fires **more**.
+
+| condition | fires on bridge | fires on comparison | difference |
+|---|---:|---:|---:|
+| (b) `max(e,n,c)` | 0.8069 | 0.6582 | **−0.1486** |
+| (b) `1-n` | 0.7882 | 0.7342 | −0.0540 |
+| **(c) I-GATE** | 0.7726 | 0.7975 | **+0.0249** |
+| (b) `e` | 0.7664 | 0.8228 | +0.0564 |
+
+**The pre-registered "weak" scalar is the one that correctly declines**, firing
+15 points less where expansion hurts — and it has both the best comparison EM
+(0.1392) and the best pooled EM (0.3225). The decomposed gate cannot decline.
+
+The mechanism is `r`, and it is unambiguous. At base depth `r` is **flat across
+question types** despite retrieval quality differing by 0.21 Recall@3:
+
+| type | mean r | median r | min | max | mean `1-r` | `r < 0.5` |
+|---|---:|---:|---:|---:|---:|---:|
+| bridge | 0.4562 | 0.4593 | 0.3282 | 0.5333 | 0.5438 | 265/321 (82.6%) |
+| comparison | 0.4483 | 0.4500 | 0.3111 | 0.5333 | 0.5517 | 65/79 (82.3%) |
+
+`r` differs by **0.008** between a type retrieved at R@3 = 0.873 and one
+retrieved at 0.659. It is not measuring retrieval adequacy in any way that
+tracks retrieval success. And because `r < 0.5` on **82% of the whole sample**,
+`T = r·e ≤ r < 1-r ≤ I` there: *"well supported, do not expand" is
+unrepresentable on four questions in five.* This is the Addendum 2 degeneracy
+measured directly, and it is the proximate cause of the RQ3 null.
+
+### Comparison questions only: fixed-`k` beats every gated condition
+
+n = 79, underpowered by design — the direction and counts are the point.
+Fixed-`k` EM = 0.1646 (13/79).
+
+| condition | EM | b | c | p | direction |
+|---|---:|---:|---:|---:|---|
+| (b) `max(e,n,c)` | 0.1392 | 2 | 4 | 0.6875 | fixed-`k` better |
+| (c) I-GATE | 0.1139 | 2 | 6 | 0.2891 | fixed-`k` better |
+| (b) `e` | 0.1139 | 3 | 7 | 0.3438 | fixed-`k` better |
+| (b) `1-n` | 0.1013 | 2 | 7 | 0.1797 | fixed-`k` better |
+
+*(b = gated right where fixed-`k` wrong; c = the reverse.)* Every one is null
+individually, but `c > b` in **all four**, totalling b=9 against c=24. Four
+conditions failing in the same direction is weak evidence individually and
+consistent evidence jointly: on comparison questions, expanding at all is the
+mistake.
+
+Splitting comparison EM by whether the condition actually expanded (small
+cells, indicative only):
+
+| condition | expanded | did not expand |
+|---|---|---|
+| (b) `max(e,n,c)` | 0.1154 (n=52) | **0.1852** (n=27) |
+| (b) `e` | 0.1077 (n=65) | 0.1429 (n=14) |
+| **(c) I-GATE** | **0.1270** (n=63) | **0.0625** (n=16) |
+| (b) `1-n` | 0.1207 (n=58) | 0.0476 (n=21) |
+
+For `max(e,n,c)` and `e`, declining was associated with *higher* EM — the gate
+withheld expansion where withholding helped. For the I-gate the relation is
+**inverted**: its 16 non-firing decisions scored 0.0625 against 0.1270 for the
+ones it expanded. Its selectivity is not merely absent but mildly
+anti-correlated with where selectivity pays. At n=16 this is indicative, not
+established.
+
 ### What this means for the claim
 
 The narrowed claim registered in Phase 0 was *expansion conditioned on a
