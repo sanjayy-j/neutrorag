@@ -160,15 +160,27 @@ def main() -> None:
         b, c, p = mcnemar(ok["c_i_gate"], ok[cond]) if cond != "c_i_gate" else (0, 0, 1.0)
         tst = ("reference" if cond == "c_i_gate"
                else f"exact McNemar vs I-gate b={b} c={c} p={p:.4f}")
+        gic = (statistics.mean(1 if int(by[cond][q]["gold_in_context"]) else 0
+                               for q in recov) if recov else 0.0)
+        suf = [q for q in qids if q not in set(recov)]
+        unn = (statistics.mean(1 if int(by[cond][q]["expansions_used"]) else 0
+                               for q in suf) if suf else 0.0)
+        rate = statistics.mean(1 if int(by[cond][q]["expansions_used"]) else 0
+                               for q in qids)
         row(f"P4-{cond}",
-            f"Pooled end-to-end accuracy, condition {cond}.",
-            f"EM {em[cond]:.4f}, token-F1 {f1[cond]:.4f}, EM on recoverable-miss {emr[cond]:.4f}",
+            f"Pooled end-to-end accuracy and expansion behaviour, condition {cond}.",
+            f"EM {em[cond]:.4f}, token-F1 {f1[cond]:.4f}, "
+            f"EM on recoverable-miss {emr[cond]:.4f}, "
+            f"gold recovered into context {gic:.4f}, "
+            f"unnecessary-expansion rate {unn:.4f}, "
+            f"expansion rate {rate:.4f}",
             tst, ng, "experiments/analyse_hotpot_gate.py", YES)
 
     row("P5",
         "All four gated conditions expand on exactly the same NUMBER of questions by construction, but not the same questions.",
         "; ".join(f"{c.replace('b_scalar_', '').replace('c_i_gate', 'I-gate')} "
-                  f"{len(fired[c])}/{ng}" for c in gated)
+                  f"{len(fired[c])}/{ng} (rate {len(fired[c]) / ng:.4f})"
+                  for c in gated)
         + f"; fired by all four {len(set.intersection(*fired.values()))}, "
           f"by at least one {len(set.union(*fired.values()))}",
         "n/a (calibration identity)", ng,

@@ -1,268 +1,247 @@
 # NeutroRAG — results and provenance
 
-Every number NeutroRAG claims, with the command that produced it and its status.
-Regenerate all of it with:
+**The central hypothesis was pre-registered and refuted.** A gate conditioned on
+a decomposed evidence state did not outperform a gate conditioned on a single
+scalar confidence at equal expansion budget. Tracing why produced the project's
+most substantial finding: the retrieval-sufficiency term `r` is, on this corpus,
+**~91% a count of how many passages were fetched** — so a gate that both reads
+`r` and changes retrieval depth is largely reading back its own previous action.
 
-```bash
-python experiments/reproduce_all.py                # offline, from committed artefacts
-python experiments/reproduce_all.py --with-models  # also re-runs the model-dependent steps
-```
-
-**Standing rule (supervisory memo, expectation #1): no number enters the report
-unless a script committed to this repository produced it.** If a number is not in
-this file, it does not go in the report.
-
----
-
-## Status summary
-
-| | |
-|---|---|
-| **Gate A** | **FAILED** — the raw NLI baseline scores higher than NeutroRAG |
-| **Gate B** (definition of `r`) | signed off, revised; `r` implemented AND `I = max(1-r, n)`. **Prediction confirmed — the mass identity is broken** |
-| **Decision 1** (pairwise mode) | implemented; sanity gate passed, but **both CONFLICTS stop conditions fired** |
-| **Decision 2** (saturation targets) | re-derived from depth alone and committed before any accuracy run (`53d305e`) |
-| **Gate C** (expansion loop not a no-op) | test written and **passing** — see below |
-
-> **Step 6 landed** (pairwise `disagree`), and **Step 9 (CONFLICTS) ran and was
-> halted** on its own stop conditions — but for a measurement error, not a
-> finding about the method. See the Step 9 section.
+Two findings are positive and significant. Expansion beats no expansion on
+recoverable misses (p=0.0011), and lexical `coverage` significantly outpredicts
+the retriever's own relevance score for whether retrieval succeeded (rho 0.2232,
+p<0.0001, against 0.0196, p=0.6956).
 
 ---
 
-## Gate B (revised): `I = max(1-r, n)` — the mass identity is broken
+## How to read this document
 
-### The change
+[`results/claims.md`](results/claims.md) is **authoritative**. It lists all 46
+claims with figures, tests, n, the regenerating script, and whether each was
+pre-registered. It is produced by `python experiments/make_claims_manifest.py`,
+which recomputes every figure from the committed artefacts rather than
+transcribing any, so it cannot drift from the data. **If this document and
+`claims.md` disagree, `claims.md` is right.**
 
-`scoring.py:229`: `I = clamp(1.0 - r + r * n)` becomes `I = clamp(max(1.0 - r, n))`.
-`T`, `F`, `lambda` and `disagree` are byte-identical; `policy.py` untouched.
-Indeterminacy is now the **worse** of two independent doubts — thin retrieval
-(`1-r`) or on-topic but uninformative evidence (`n`) — rather than a
-multiplicative blend of them.
+Every table below names the script that regenerates it. Three cautions apply
+throughout:
 
-The first Gate B attempt (redefining `r` alone) could not have worked, and this
-is why: `r` multiplied the whole NLI simplex across the three channels and then
-cancelled against `I`'s `(1-r)` term, giving `T+I+F = 1 + λ·disagree` for **any**
-`r`. Breaking it required changing `I`, which memo F5 route (i) actually asked
-for ("break the identity by *deriving I* from a retrieval-sufficiency signal").
+- **Only 9 of 46 claims are pre-registered.** The by-type split, the component
+  diagnostics and the depth analysis were all chosen *after* seeing the Phase 3
+  null. They are the most interesting results here and they are exploratory;
+  p-values are not corrected for that selection. See
+  [`PREREGISTRATION.md`](PREREGISTRATION.md) Addendum 3(c).
+- **The reader is extractive**, so Exact Match is capped at **0.938** overall
+  and **0.692** on comparison questions. 458 of 7405 HotpotQA validation answers
+  are yes/no, which no span reader can produce. Read every EM against that
+  ceiling, never against 1.0.
+- **Scope is one retriever, one reader, one corpus**, n=400, seed 20261019.
 
-### The prediction test — CONFIRMED
+Withdrawn claims are collected in [Claims withdrawn during
+analysis](#claims-withdrawn-during-analysis) at the end. They are **not** left
+inline, so nothing a skimming reader meets as live text has been retracted.
 
-```bash
-python experiments/check_mass_identity.py
-```
+---
 
-| check | max \|deviation\| | before |
-|---|---:|---:|
-| random draws, `r ~ Uniform(0,1)` | **2.499e-01** | 4.441e-16 |
-| random draws, `r` computed by `sufficiency` | **2.496e-01** | 4.441e-16 |
-| real run: pipeline corpus + graph | **1.696e-01** | 2.220e-16 |
-| real run: 200 FEVER claims | **2.275e-01** | 2.220e-16 |
+# Part 1 — What was built
 
-This matches the analytic bound exactly. Deviation is `-r·n` when `1-r > n` and
-`-(1-n)(1-r)` otherwise; both are maximised at `n = 1-r`, where each equals
-`r(1-r)` — i.e. **0.25 at r = 0.5**.
+A training-free trust layer over retrieval-augmented generation. Retrieved
+evidence is scored into a neutrosophic triple and a five-way policy acts on it:
 
-### The mass now carries independent information
+| channel | formula | reads as |
+|---|---|---|
+| **T** truth | `r · e` | the evidence supports the claim |
+| **I** indeterminacy | `max(1-r, n)` | evidence is missing or uninformative |
+| **F** falsity | `r · c + λ · disagree` | the evidence contradicts, or contradicts itself |
 
-| corpus | min | median | max | mass > 1 | mass < 1 |
-|---|---:|---:|---:|---:|---:|
-| pipeline (4 claims) | 0.930 | 1.100 | 1.471 | 75% | 25% |
-| FEVER (200 claims) | 0.775 | 0.988 | 1.277 | 24.5% | 75.5% |
+with `e, n, c` the entailment / neutral / contradiction outputs of an NLI head,
+`r ∈ [0,1]` a retrieval-sufficiency term computed **without any NLI input**, and
 
-Under the old `I`, **all 200** FEVER rows had mass > 1, because "mass > 1" was
-identically "disagree > 0". Under the new `I`, 49/200 do, and the two criteria
-**disagree on 75.5% of rows**. The mass can now also fall *below* 1, which it
-previously never could.
+&nbsp;&nbsp;&nbsp;&nbsp;`disagree = 2 · max over ordered pairs (i,j) of min(eᵢ, c_j)`
 
-## The r-ablation — computed `r` is much worse, on FEVER
+The policy chooses ANSWER / EXPAND / SURFACE_CONTRADICTION / HEDGE / ABSTAIN.
+`neutrorag/core.py` and `neutrorag/policy.py` are frozen and were not modified
+during any experiment.
 
-```bash
-python experiments/run_r_ablation.py    # -> results/r_ablation.{md,csv}
-```
+### The one operator-level result that holds: dilution invariance
 
-Same data, same replayed NLI outputs, `I` held at `max(1-r, n)`; only `r` varies.
+*Regenerated by `python experiments/check_conflict_dilution.py --nli real`*
 
-| condition | accuracy | macro-F1 |
-|---|---:|---:|
-| (a) `r = 0.9` constant | 0.7550 | 0.7571 |
-| (b) `r = sufficiency` | **0.4600** | 0.4043 |
-| raw `argmax(e,n,c)` [reference] | 0.7550 | 0.7574 |
-
-**(b) − (a) = −0.2950.** Differ on 85/200 rows; exact McNemar b=13, c=72,
-**p = 0.0000**. Large and highly significant.
-
-**This measures memo F9, not the sufficiency design.** FEVER gives one gold
-passage per claim: 185/200 rows carry exactly one, and with no graph and no
-provenance `connectivity` and `diversity` are unavailable. Only `coverage` can
-really vary, so `r` is a near-proxy for claim/passage token overlap on this
-corpus rather than a measure of retrieval depth.
-
-Under the Decision-2 target (`support_target = 1`, FEVER's own p75 depth)
-`support_count` saturates on every row and `r` spans [0.500, 1.000] with a median
-of **0.750** and 26 distinct values; **17/200** rows land at `r ≤ 0.5`, the memo
-F12 regime where `I = max(1-r, n) ≥ 0.5` automatically. Condition (b) loses on
-precisely those low-`r` rows: F-recall falls 0.853 → **0.662** and T-recall
-0.631 → **0.554**, while I-recall is flat at 0.776 and I-*precision* falls to
-0.500 — it is predicting I more often and being wrong when it does. No parameter
-was retuned; the targets were committed before this run.
-
-*(These figures were 0.417 and 143/200 before the Decision-2 calibration. The
-earlier reading — that the whole corpus sat inside the F12 regime — no longer
-holds, and the current explanation is the low-`r` tail, not the corpus median.)*
-
-## Sensitivity sweep (memo F12)
-
-```bash
-python experiments/run_sensitivity_sweep.py   # -> results/sensitivity_sweep.{csv,png}
-```
-
-**The F12 boundary did not move.** `I = max(1-r, n) ≥ 1-r` and `T = r·e ≤ r`, so
-for `r < 0.5`, `I ≥ 1-r > r ≥ T` — I beats T unconditionally. The old
-`I = (1-r) + r·n` also satisfies `I ≥ 1-r`, so the regime begins at `r = 0.5`
-under **both** formulas. Empirically the cliff is sharp:
-
-| r | predicted I | action = EXPAND | attribution accuracy |
-|---:|---:|---:|---:|
-| 0.50 | 97.5% | 72.5% | 0.350 |
-| 0.52 | 62.5% | 40.0% | 0.680 |
-| 1.00 | 41.0% | 37.0% | 0.765 |
-
-I is the argmax for *every* claim at any `r ≤ 0.42`, and for at least half of
-them at any `r ≤ 0.58`.
-
-**The median-`r` figure here moved with the Decision-2 calibration and the
-conclusion inverted.** Before calibration FEVER's median `r` was 0.417, which put
-the whole corpus inside the degenerate regime. Under the committed targets the
-median is **0.750**, the range is [0.500, 1.000], and **0 of 200** rows fall at
-`r ≤ 0.42`. The corpus is no longer inside that regime, so the F12 cliff is not
-the explanation for the current FEVER result — the mechanism below is.
-
-**Why the computed `r` loses to a constant one.** The sweep pins `r`, so its
-rows are directly comparable to the live system, which computes it. Every pinned
-value in the observed range beats the computed one: `r = 1.0` scores 0.765,
-`r = 0.8` scores 0.745, `r = 0.6` scores 0.735 — while the computed, *varying*
-`r` scores **0.665**. It is therefore not the level of `r` that costs accuracy
-but its spread. The 20 rows carrying the lowest `r` get an `I` floor of `1-r`
-large enough to win the argmax, and the live system pays for them while any
-constant `r ≥ 0.6` does not.
-
-That is the whole of the −0.0900 gap, and it is unusually clean:
-
-- The two systems differ on exactly **20 of 200** rows.
-- On **all 20**, NeutroRAG predicts **`I`** — not one is a T↔F disagreement.
-- The baseline is correct on **19** of those 20 (McNemar c=19, b=1).
-- **17 of the 20** are rows with `r ≤ 0.58`.
-
-So the layer's only effect on FEVER is to overwrite a correct, confident NLI
-judgement with "not enough info" on the rows where retrieval sufficiency scores
-low — and on FEVER, `r` scoring low is mostly an artefact of the corpus (one gold
-passage, constant relevance, no graph, no source labels) rather than a fact about
-the evidence. That is a measurement-validity problem for `r` on this corpus, and
-it is the same conclusion the r-ablation reached from the other direction.
-
-Other sweep observations, none acted on: accuracy is highest at `r = 1.0`
-(0.765), and the small edge there over raw `argmax(e,n,c)` (0.755) comes from
-`λ·disagree` in F. `lambda` is nearly flat for
-attribution (0.455–0.470 over 0–2) but monotonically raises the
-SURFACE_CONTRADICTION rate. `connectivity` and `diversity` weights are inert on
-FEVER; at weight 1.0 for either, every *available* component has zero weight and
-`r` falls to 0.
-
-## Phase 3 / RQ3 — the gate FAILED. Pre-registered stop condition fired.
-
-```bash
-python experiments/run_hotpot_gate.py          # N=400, seed 20261019, 150.5 min
-python experiments/analyse_hotpot_gate.py
-```
-
-Pre-registered in [`PREREGISTRATION.md`](PREREGISTRATION.md) as the question that
-decides the project. **The answer is: indeterminacy-triggered expansion recovers
-answers that fixed-`k` misses, and does not beat a scalar-confidence trigger at
-equal expansion budget.** The novelty claim does not survive.
-
-Conditions: identical retriever, identical reader, identical expansion schedule
-(`k = 3 → 6 → 10`). (b) and (c) are computed from the **same per-passage NLI
-outputs**, so the only thing that differs between them is the decision function.
-
-| condition | exp. rate | recovery | unnecessary exp. | **EM** | token-F1 |
-|---|---:|---:|---:|---:|---:|
-| (a) FIXED-k | 0.0000 | 0.0000 | 0.0000 | 0.2675 | 0.3636 |
-| **(c) I-GATE** | 0.7775 | 0.7027 | 0.7865 | **0.3025** | 0.4032 |
-| (b) scalar `max(e,n,c)` | 0.7775 | 0.7342 | 0.7584 | **0.3225** | 0.4247 |
-| (b) scalar `1-n` | 0.7775 | 0.7477 | 0.7921 | **0.3075** | 0.4086 |
-| (b) scalar `e` | 0.7775 | 0.8153 | 0.7247 | **0.3100** | 0.4066 |
-
-Recoverable-miss subset: **222/400 (55.5%)** — five times the pre-registered
-power floor of ~40. Top-3 already sufficient on 178/400 (44.5%).
-
-### RQ3, first half: YES — expansion recovers misses
-
-On the recoverable-miss subset, EM rises from **0.1486** (fixed-`k`) to **0.2432**
-(I-gate), exact McNemar **b=30, c=9, p=0.0011**. Indeterminacy-triggered
-expansion genuinely recovers answers that fixed-`k` retrieval misses, and the
-effect is significant.
-
-### RQ3, second half: NO — and this is the claim
-
-**All three scalar gates beat the I-gate on end-to-end EM.** The I-gate is last
-of the four gated conditions:
-
-| comparison | McNemar | p |
-|---|---|---:|
-| (c) vs (a) FIXED-k, whole sample | b=34, c=20 | 0.0759 |
-| (c) vs (a) FIXED-k, recoverable-miss | **b=30, c=9** | **0.0011** |
-| (c) vs (b) `max(e,n,c)` | b=14, c=22 | 0.2430 |
-| (c) vs (b) `1-n` | b=6, c=8 | 0.7905 |
-| (c) vs (b) `e` | b=7, c=10 | 0.6291 |
-
-No scalar beats the I-gate *significantly*, but the I-gate does not beat any of
-them, and the pre-registered condition was that it must. **Conditioning on `I`
-specifically adds nothing over conditioning on low confidence generally.**
-
-### The null is NOT explained by the two triggers choosing the same questions
-
-This was the obvious alternative reading and it is ruled out. Equal firing rates
-do not imply equal decisions: with `|A| = |B| = 311` of 400, pigeonhole forces
-overlap `≥ 2(311) − 400 = 222`, i.e. **≥ 71.4%** of the firing set, and equal
-rates make the two discordant sets exactly the same size.
-
-| gate | \|A∩B\| | overlap | c-only | b-only | decision agreement | effective n |
+| filler passages added | 0 | 1 | 2 | 3 | 4 | spread |
 |---|---:|---:|---:|---:|---:|---:|
-| `max(e,n,c)` | 225 | **72.3%** | 86 | 86 | 57.0% | **172** |
-| `e` | 251 | 80.7% | 60 | 60 | 70.0% | 120 |
-| `1-n` | 277 | 89.1% | 34 | 34 | 83.0% | 68 |
+| `disagree`, mean-pooled | 0.847 | 0.643 | 0.525 | 0.452 | 0.400 | **0.446** |
+| `disagree`, pairwise | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | **0.000** |
+| pairwise, raw/unclamped | 1.739 | 1.739 | 1.739 | 1.739 | 1.739 | 0.000 |
 
-`max(e,n,c)` overlaps the I-gate on **72.3%, barely above the 71.4% floor** — its
-decisions are close to maximally different given the rate constraint, on 172
-discordant questions. So the two triggers select substantially *different*
-questions and the scalar still wins. Restricted to the discordant set, where all
-the signal is (a concordant question runs an identical pipeline and returns an
-identical answer, contributing a noise-free tie):
+**Proof, both directions.** Mean-pooled: adding a passage with `e_j ≈ 0, c_j ≈ 0`
+raises the weighted denominator by `w_j` while adding ≈0 to both numerators, so
+`ē` and `c̄` strictly fall; `min` is monotone, so `2·min(ē, c̄)` strictly falls.
+Dilution-sensitive by construction and unbounded below. Pairwise: a neutral
+passage leaves every existing pair intact — no term in `min(eᵢ, c_j)` depends on
+any other passage or on `n` — so the max over a superset cannot fall; and every
+pair it adds contributes `min(·) ≤ e_j` or `≤ c_j`, both ≈0, so the max cannot
+rise. Hence `M' = M` exactly. `max` is correct here because conflict is an
+*existential* property of a set, while a mean answers a *universal* question the
+policy never asks.
 
-| gate | n_discordant | (c) I-gate EM | (b) scalar EM | difference | McNemar p |
+The raw unclamped row being flat at 1.739 rules out the clamp as the
+explanation: the invariance is genuine, not a ceiling effect.
+
+**Scope, stated honestly.** This separates the operator from **mean-pooled NLI
+aggregation** — the standard in NLI-based RAG verification and SURE-RAG's own
+weak baseline. It does **not** separate it from Dempster–Shafer methods, where
+a vacuous mass is the neutral element of the combination rule *by construction*,
+so dilution-invariance is automatic and not a result. Against EvidentialRAG
+(arXiv 2607.10491) this proof buys nothing.
+
+---
+
+# Part 2 — The pre-registered prediction
+
+After a literature check found EvidentialRAG — which separates ignorance from
+conflict via Dempster–Shafer and then routes on a single fused uncertainty
+score — the claim was narrowed and **pre-registered before any Phase 3 data was
+seen** ([`PREREGISTRATION.md`](PREREGISTRATION.md), commit `2551e65`):
+
+> Retrieval expansion conditioned on a **decomposed** evidence state, where
+> **indeterminacy specifically** (not low confidence generally) triggers
+> expansion while contradiction triggers a different action. Training-free, no
+> LLM in the gate.
+
+The registered test, RQ3, with its stop condition:
+
+- **(a) FIXED-k** — never expands.
+- **(b) SCALAR-GATE** — expands when a scalar confidence falls below a
+  threshold.
+- **(c) I-GATE** — expands when `I` dominates.
+
+(b) and (c) are computed from the **same per-passage NLI outputs**, so the only
+difference between them is the decision function. (b)'s threshold is set to the
+quantile of its own score distribution that **reproduces (c)'s expansion rate**,
+equalising budgets by construction.
+
+> **Registered stop condition.** If (c) does not beat (b) at equal budget,
+> conditioning on `I` adds nothing over conditioning on low confidence
+> generally; halt, report, and do not run Phases 4–5. Do not adjust thresholds.
+
+A second prediction was registered in Addendum 2, after a wiring bug was found
+and before the corrected run: **(c) would beat (b) on recovering gold into
+context.**
+
+Addendum 2 also registered, in advance, a structural concern: at the
+depth-derived saturation targets `r = 0.463` at base depth, and since
+`T = r·e ≤ r < 1-r ≤ I`, **truth cannot beat indeterminacy for any possible NLI
+output**. That was recorded before the verdict so it could not later be offered
+as an excuse.
+
+### Retrieval, measured first
+
+*Regenerated by `python experiments/run_hotpot_retrieval.py`*
+
+| k | Recall@k | 95% CI | context precision@k | sentence recall@k |
+|---:|---:|---:|---:|---:|
+| 1 | 0.4088 | [0.361, 0.457] | 0.8175 | 0.4122 |
+| 2 | 0.6150 | [0.567, 0.663] | 0.6150 | 0.6187 |
+| 3 | 0.7013 | [0.656, 0.746] | 0.4675 | 0.7033 |
+| 5 | 0.8137 | [0.776, 0.852] | 0.3255 | 0.8177 |
+| 10 | 1.0000 | — | 0.2005 | 1.0000 |
+
+**MRR 0.8904 · nDCG@10 0.8431.** Two of these are not results: Recall@10 = 1.0
+on 400/400 is an **index-completeness check** (every paragraph an instance owns
+is indexed), and context precision falling with k is arithmetic, the numerator
+being capped at 2 gold. The informative reading is MRR 0.8904 against Recall@1
+0.4088 — the retriever reliably finds *one* gold paragraph and routinely misses
+the second, the characteristic multi-hop failure. At k=2, both gold are
+retrieved on 120/400 (30.0%) and neither on 28/400 (7.0%).
+
+| type | n | R@2 | R@3 | R@5 | MRR | nDCG@10 |
+|---|---:|---:|---:|---:|---:|---:|
+| bridge | 321 | 0.5779 | 0.6589 | 0.7773 | 0.8717 | 0.8217 |
+| comparison | 79 | 0.7658 | 0.8734 | 0.9620 | 0.9662 | 0.9303 |
+
+**Comparison questions retrieve far better than bridge** (R@3 0.873 vs 0.659),
+because a comparison question names both entities explicitly while a bridge
+question names only the first. This matters in Part 3: the two types invert on
+answering.
+
+---
+
+# Part 3 — The prediction failed
+
+*Regenerated by `python experiments/run_hotpot_gate.py` then
+`python experiments/analyse_hotpot_gate.py`. N=400, seed 20261019, 150.5 min.*
+
+Base depth k=3, expansion schedule k = 3 → 6 → 10. Recoverable-miss subset
+**222/400 (55.5%)**, five times the registered power floor of ~40; top-3
+already sufficient on 178/400 (44.5%).
+
+| condition | exp. rate | gold recovered | unnecessary exp. | **EM** | 95% CI | token-F1 | EM on recoverable-miss |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| (a) FIXED-k | 0.0000 | 0.0000 | 0.0000 | 0.2675 | [0.224, 0.311] | 0.3636 | 0.1486 |
+| **(c) I-GATE** | 0.7775 | 0.7027 | 0.7865 | **0.3025** | [0.257, 0.348] | 0.4032 | 0.2432 |
+| (b) `max(e,n,c)` | 0.7775 | 0.7342 | 0.7584 | **0.3225** | [0.277, 0.368] | 0.4247 | 0.2658 |
+| (b) `1-n` | 0.7775 | 0.7477 | 0.7921 | **0.3075** | [0.262, 0.353] | 0.4086 | 0.2658 |
+| (b) `e` | 0.7775 | 0.8153 | 0.7247 | **0.3100** | [0.265, 0.355] | 0.4066 | 0.2703 |
+
+### RQ3's first half succeeded
+
+Expansion recovers answers fixed-k misses: on the recoverable-miss subset EM
+rises **0.1486 → 0.2432**, exact McNemar **b=30, c=9, p=0.0011**. This is the
+one significant positive result in Phase 3. It reproduces
+FLARE / CRAG / Adaptive-RAG in a training-free setting rather than extending
+them.
+
+### RQ3's second half failed — the stop condition fired
+
+**All three scalar gates beat the I-gate on EM.** It finishes last of the four
+gated conditions.
+
+| comparison | whole sample | recoverable-miss |
+|---|---|---|
+| (c) vs (a) FIXED-k | b=34, c=20, p=0.0759 | **b=30, c=9, p=0.0011** |
+| (c) vs (b) `max(e,n,c)` | b=14, c=22, **p=0.2430** | b=12, c=17, p=0.4583 |
+| (c) vs (b) `e` | b=7, c=10, p=0.6291 | b=4, c=10, p=0.1796 |
+| (c) vs (b) `1-n` | b=6, c=8, p=0.7905 | b=3, c=8, p=0.2266 |
+
+No scalar wins *significantly*, but the registered condition was that (c) must
+**beat** (b), and it beats none of them. **Phases 4 and 5 were not run.** No
+threshold, weight, lambda or target was altered after the verdict.
+
+### Addendum 2's prediction was falsified
+
+The I-gate recovered the **least** gold of all four gated conditions (0.7027 vs
+0.7342, 0.7477, 0.8153). The entailment scalar `e` beat it on **EM, recovery and
+unnecessary expansions simultaneously** — a three-way loss no budget argument
+reverses.
+
+### The null is not "the two triggers chose the same questions"
+
+Equal rates do not imply equal decisions. With `|A| = |B| = 311` of 400,
+pigeonhole forces overlap `≥ 2(311) − 400 = 222`, i.e. **≥ 71.4%** of the firing
+set; and equal rates make the two discordant sets exactly the same size.
+
+| gate | \|A∩B\| | overlap | discordant each way | decision agreement | effective n |
+|---|---:|---:|---:|---:|---:|
+| `max(e,n,c)` | 225 | **72.3%** | 86 | 57.0% | **172** |
+| `e` | 251 | 80.7% | 60 | 70.0% | 120 |
+| `1-n` | 277 | 89.1% | 34 | 83.0% | 68 |
+
+`max(e,n,c)` sits at 72.3% against the 71.4% floor — close to maximally
+different given the matched rate. On the discordant questions, where all the
+signal is (a concordant question runs an identical pipeline and returns an
+identical answer, contributing a noise-free tie), the I-gate is still behind:
+
+| gate | n | (c) I-gate EM | (b) scalar EM | difference | McNemar p |
 |---|---:|---:|---:|---:|---:|
 | `max(e,n,c)` | 172 | 0.2674 | 0.2907 | −0.0233 | 0.5847 |
 | `e` | 120 | 0.3083 | 0.3167 | −0.0083 | 1.0000 |
 | `1-n` | 68 | 0.3235 | 0.3382 | −0.0147 | 1.0000 |
 
-The I-gate is behind on every discordant set. This is not an untested
-equivalence; it is a genuine difference in which the decomposition is **not
-better**.
+### One budget caveat, stated not buried
 
-### Addendum 2's prediction is falsified
-
-Registered in advance: *"(c) will beat (b) on recovering gold into context."*
-It did not. The I-gate recovered the **least** gold of all four gated conditions
-— 0.7027 against 0.7342, 0.7477 and 0.8153. The entailment scalar `e` recovered
-the most gold (0.8153), used the **fewest** unnecessary expansions (0.7247) and
-scored higher EM (0.3100). It beats the I-gate on all three axes at once.
-
-### One budget caveat, stated rather than buried
-
-The pre-registered criterion — the fraction of questions that expand at all —
-is matched **exactly**: 0.7775 for every gated condition, 311/400. Total
-expansions are *not* identical, and the I-gate uses **fewer**:
+The registered criterion — fraction of questions expanding at all — matched
+**exactly** at 0.7775 (311/400) for every gated condition. **Total** expansions
+did not, and the I-gate used fewer:
 
 | condition | mean expansions | total | mean final k |
 |---|---:|---:|---:|
@@ -271,898 +250,353 @@ expansions are *not* identical, and the I-gate uses **fewer**:
 | (b) `1-n` | 1.5075 | 603 | 8.25 |
 | (b) `e` | 1.5275 | 611 | 8.33 |
 
-The I-gate consumes 7–13% less total retrieval, because it stops re-firing
-sooner after expanding. So it is **cheaper and less accurate**, and a reading in
-which the gap narrows at equal *total* consumption cannot be excluded from this
-data. It cannot rescue the claim, though: the `e` scalar beats the I-gate on EM,
-on recovery and on unnecessary expansions simultaneously, and no budget
-adjustment reverses a three-way loss. Per the pre-registration, no threshold was
-touched after calibration.
+The I-gate consumes 7–13% less total retrieval: **cheaper and less accurate**. A
+reading in which the gap narrows at equal *total* consumption cannot be excluded
+from this data, but it cannot rescue the claim either, because `e` wins on three
+axes at once.
 
-### Two findings that outlast the verdict
+---
 
-**1. Recovering the evidence is not recovering the answer.** Expansion puts the
-gold paragraph into context 70–82% of the time on the recoverable-miss subset,
-yet EM there reaches only 0.24–0.27. The gate's job is largely being done; the
-reader then fails anyway. An extractive span reader handed more passages has
-more distractors to choose between, so retrieval recovery and answer recovery
-come apart. **This caps what any gating signal can deliver on this pipeline**,
-and it means RQ3's second half was being measured through a lossy downstream
-stage.
+# Part 4 — Deriving the mechanism
 
-**2. Expansion helps bridge questions and hurts comparison questions.**
+*Exploratory from here to the end of Part 5 — chosen after seeing the null.*
 
-| condition | bridge (n=321) | comparison (n=79) |
-|---|---|---|
-| (a) FIXED-k | 0.293 [0.24, 0.34] | **0.165** [0.08, 0.25] |
-| (c) I-GATE | 0.349 [0.30, 0.40] | 0.114 [0.04, 0.18] |
-| (b) `max(e,n,c)` | **0.368** [0.31, 0.42] | 0.139 [0.06, 0.22] |
-| (b) `1-n` | 0.358 [0.31, 0.41] | 0.101 [0.03, 0.17] |
-| (b) `e` | 0.358 [0.31, 0.41] | 0.114 [0.04, 0.18] |
+### The gate fires where expansion hurts
 
-Every gated condition improves bridge and **degrades comparison below
-fixed-`k`**. This is consistent with Phase 2: comparison questions already
-retrieve well (R@3 = 0.873), so expansion adds only distractors. The comparison
-arm is underpowered (n=79, with ~30.8% yes/no unreachable by a span reader), so
-the intervals overlap — but the direction is uniform across all four gated
-conditions, which makes it unlikely to be noise.
+*Regenerated by `python experiments/analyse_hotpot_by_type.py`*
 
-### Why the gate cannot decline: `r` does not distinguish the two types
+Comparison questions already retrieve well (R@3 0.873) and expansion
+**degrades** them below fixed-k. A working gate would fire *less* there. The
+I-gate fires *more*.
 
-```bash
-python experiments/analyse_hotpot_by_type.py     # groupby, no re-run
-```
-
-Phase 2 established that comparison questions already retrieve well
-(Recall@3 = 0.873 against bridge's 0.659) and Phase 3 that expansion **degrades**
-comparison below fixed-`k`. A working gate would therefore fire *less* on
-comparison. The I-gate fires **more**.
-
-| condition | fires on bridge | fires on comparison | difference |
+| condition | fires on bridge | fires on comparison | differential |
 |---|---:|---:|---:|
 | (b) `max(e,n,c)` | 0.8069 | 0.6582 | **−0.1486** |
 | (b) `1-n` | 0.7882 | 0.7342 | −0.0540 |
 | **(c) I-GATE** | 0.7726 | 0.7975 | **+0.0249** |
 | (b) `e` | 0.7664 | 0.8228 | +0.0564 |
 
-**The pre-registered "weak" scalar is the one that correctly declines**, firing
-15 points less where expansion hurts — and it has both the best comparison EM
-(0.1392) and the best pooled EM (0.3225). The decomposed gate cannot decline.
+**The pre-registered "weak" scalar is the only gate that correctly declines**,
+and it has both the best comparison EM and the best pooled EM.
 
-The mechanism is `r`, and it is unambiguous. At base depth `r` is **flat across
-question types** despite retrieval quality differing by 0.21 Recall@3:
+| condition | bridge EM (n=321) | comparison EM (n=79) | comparison vs fixed-k |
+|---|---|---|---|
+| (a) FIXED-k | 0.293 [0.24, 0.34] | **0.165** [0.08, 0.25] | — |
+| (b) `max(e,n,c)` | **0.368** [0.31, 0.42] | 0.139 [0.06, 0.22] | b=2, c=4, p=0.6875 |
+| (c) I-GATE | 0.349 [0.30, 0.40] | 0.114 [0.04, 0.18] | b=2, c=6, p=0.2891 |
+| (b) `e` | 0.358 [0.31, 0.41] | 0.114 [0.04, 0.18] | b=3, c=7, p=0.3438 |
+| (b) `1-n` | 0.358 [0.31, 0.41] | 0.101 [0.03, 0.17] | b=2, c=7, p=0.1797 |
 
-| type | mean r | median r | min | max | mean `1-r` | `r < 0.5` |
+Every gated condition improves bridge and degrades comparison. Each
+comparison-only test is individually null, but `c > b` in **all four**,
+totalling b=9 against c=24. n=79; direction only.
+
+### `r` is one component wearing a four-component costume
+
+*Regenerated by `python experiments/diagnose_r_components.py`*
+
+| component | min | max | range | mean | variance | distinct |
 |---|---:|---:|---:|---:|---:|---:|
-| bridge | 0.4562 | 0.4593 | 0.3282 | 0.5333 | 0.5438 | 265/321 (82.6%) |
-| comparison | 0.4483 | 0.4500 | 0.3111 | 0.5333 | 0.5517 | 65/79 (82.3%) |
+| `coverage` | 0.2222 | 1.0000 | 0.7778 | 0.7207 | 0.023640 | 66 |
+| `support_count` | 0.3000 | 0.3000 | **0.0000** | 0.3000 | **0.000000** | **1** |
+| `diversity` | 0.3000 | 0.3000 | **0.0000** | 0.3000 | **0.000000** | **1** |
+| **`r`** | 0.2741 | 0.5333 | 0.2593 | 0.4402 | 0.002627 | 66 |
+| *[Recall@3]* | 0.0000 | 1.0000 | 1.0000 | 0.7013 | 0.081373 | 3 |
 
-`r` differs by **0.008** between a type retrieved at R@3 = 0.873 and one
-retrieved at 0.659, so its absolute level does not distinguish the two types.
-(It does rank-correlate with retrieval success *within* a type — see the
-diagnostics below, which withdraw a stronger claim made in an earlier draft of
-this section.) And because `r < 0.5` on **82% of the whole sample**,
-`T = r·e ≤ r < 1-r ≤ I` there: *"well supported, do not expand" is
-unrepresentable on four questions in five.* This is the Addendum 2 degeneracy
-measured directly, and it is the proximate cause of the RQ3 null.
-
-### Diagnostics: r's failure is COMPOSITION, not inputs
-
-```bash
-python experiments/diagnose_r_components.py      # NLI-free; no accuracy recomputed
-```
-
-**Correction to the claim made above.** The statement that `r` "is not measuring
-retrieval adequacy in any way that tracks retrieval success" was **too strong**
-and is withdrawn. `r` does rank-correlate with per-question Recall@3. What it
-lacks is *range*, not *signal*. Both of the following are true, and the earlier
-text conflated them: `r`'s **absolute level** barely differs between question
-types (0.4562 vs 0.4483), while **within** each type it ranks questions by
-retrieval success significantly.
-
-#### `r` is exactly an affine function of one component
-
-| component | min | max | range | mean | variance | distinct | at 1 |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| `coverage` | 0.2222 | 1.0000 | 0.7778 | 0.7207 | 0.023640 | 66 | 20 |
-| `support_count` | 0.3000 | 0.3000 | **0.0000** | 0.3000 | **0.000000** | **1** | 0 |
-| `diversity` | 0.3000 | 0.3000 | **0.0000** | 0.3000 | **0.000000** | **1** | 0 |
-| **`r`** | 0.2741 | 0.5333 | 0.2593 | 0.4402 | 0.002627 | 66 | 0 |
-| *[Recall@3]* | 0.0000 | 1.0000 | 1.0000 | 0.7013 | 0.081373 | 3 | 178 |
-
-`connectivity` is **dropped**, not flat: no graph is built for HotpotQA, and
+`connectivity` is **dropped**, not flat — no graph is built, and
 `sufficiency.py` removes an unavailable component and renormalises rather than
-scoring it 0. So `r` is an equal-weighted mean of three components, two of which
-have **exactly zero variance**. Therefore
+scoring it 0. Of the three that remain, **two have exactly zero variance**.
+Therefore
 
-&nbsp;&nbsp;&nbsp;&nbsp;`r = 0.3333 * coverage + 0.2000`
+&nbsp;&nbsp;&nbsp;&nbsp;**`r = 0.3333 · coverage + 0.2000`**
 
-verified to `max |predicted - actual| = 1.11e-16` over all 400 questions. `r` is
-confined to **[0.2000, 0.5333]** whatever coverage does, and **cannot reach the
-0.5 decision boundary unless `coverage > 0.9`**. Composition divides coverage's
-variance by 9 (0.02364 -> 0.00263) and caps the result below the F12 threshold.
-
-#### The signal is in the inputs, and it survives ranking
+with max residual **1.11e-16** over 400 questions. `r` is confined to
+**[0.2000, 0.5333]** and **cannot reach the 0.5 decision boundary unless
+`coverage > 0.9`**. Composition divides coverage's variance by nine while
+preserving its rank order exactly.
 
 | signal | pooled rho | p | bridge rho | p | comparison rho | p |
 |---|---:|---:|---:|---:|---:|---:|
 | `coverage` | **0.2232** | <0.0001 | 0.2232 | 0.0001 | **0.4338** | 0.0001 |
-| `support_count` | *constant* | — | *constant* | — | *constant* | — |
-| `diversity` | *constant* | — | *constant* | — | *constant* | — |
 | **`r`** | **0.2232** | <0.0001 | 0.2232 | 0.0001 | **0.4338** | 0.0001 |
 | raw `max_relevance` | 0.0196 | 0.6956 | 0.0577 | 0.3030 | 0.1723 | 0.1288 |
 
-`r` has **identical** rho to `coverage`, because Spearman is invariant under a
-monotone transform and `r` is an increasing affine function of it. Composition
-destroys range while preserving rank exactly.
+`r` has **identical** rho to `coverage` because Spearman is invariant under a
+monotone transform. Two consequences, one negative and one positive:
 
-Two consequences worth stating separately:
+- `r`'s four-component construction contributes nothing here beyond a single
+  lexical-overlap feature, rescaled into a range that cannot reach the boundary.
+- **`coverage` significantly outpredicts the retriever's own relevance score**
+  for whether retrieval succeeded. This is a real positive result and the only
+  one favouring the sufficiency idea.
 
-- **`coverage` carries real signal** — rho 0.2232 pooled and 0.4338 on
-  comparison, both significant. The inputs are not the problem.
-- **`r` decisively beats the raw retriever score**, which has rho 0.0196
-  (p = 0.6956), i.e. no measurable relation to its own retrieval success. This
-  is a *positive* result for `r` and bears on RQ2, though RQ2 proper requires
-  the answerability label rather than Recall@3.
+**Retargeting cannot fix the dead components.** At fixed `k`, both
+`min(1, count/target)` terms are deterministic functions of `k` — 3/10 = 0.3
+here; a target of 3 would give 1.0, still constant. They measure retrieval
+*depth*, and the experiment holds depth fixed. A related defect: the 0.3
+relevance floor **never bound on any of the 1200 retrieved passages**, because
+`DenseRetriever` remaps cosine to [0,1] so `rel ≥ 0.3` means `cos ≥ −0.4`.
 
-#### Why the two dead components cannot be fixed by retargeting
+---
 
-At a fixed `k`, `support_count = min(1, |{rel >= floor}| / target)` and
-`diversity = min(1, |distinct sources| / target)` are **deterministic functions
-of `k`**: here 3/10 = 0.3 both. Setting the target to 3 would make them 1.0 —
-still constant. **They measure retrieval depth, and the experiment holds depth
-fixed**, so no choice of target makes them informative at fixed `k`. Only
-dropping them, or varying `k` per question, can.
+# Part 5 — Confirmation: the gate reads back its own action
 
-A related defect: the relevance floor of 0.3 **never bound on any of the 1200
-retrieved passages**. `DenseRetriever` remaps cosine from [-1, 1] to [0, 1], so
-`relevance >= 0.3` means `cos >= -0.4`, which essentially every text pair
-satisfies. The floor as written cannot filter anything.
+*Regenerated by `python experiments/diagnose_r_depth.py`*
 
-**Diagnosis: composition.** One component with usable signal is averaged with
-two that are mathematically constant, which cuts its variance ninefold and caps
-`r` below the boundary the policy tests against. The inputs are sound; the
-aggregation is not. **No recalibration is applied here** — a derived
-recalibration is to be pre-registered with a held-out split before it touches
-any accuracy number.
+At k=10 a HotpotQA distractor instance retrieves **every** paragraph, so both
+count-based components saturate. Backing them out of the observed `r`:
 
-### Comparison questions only: fixed-`k` beats every gated condition
+- implied diversity = 1.0, **max deviation 1.478e-06**
+- **0/388** deviate by more than 1e-3
 
-n = 79, underpowered by design — the direction and counts are the point.
-Fixed-`k` EM = 0.1646 (13/79).
+That 1.5e-6 is exactly the CSV's 6-decimal rounding of `r` carried through a
+factor of three. So
 
-| condition | EM | b | c | p | direction |
-|---|---:|---:|---:|---:|---|
-| (b) `max(e,n,c)` | 0.1392 | 2 | 4 | 0.6875 | fixed-`k` better |
-| (c) I-GATE | 0.1139 | 2 | 6 | 0.2891 | fixed-`k` better |
-| (b) `e` | 0.1139 | 3 | 7 | 0.3438 | fixed-`k` better |
-| (b) `1-n` | 0.1013 | 2 | 7 | 0.1797 | fixed-`k` better |
+&nbsp;&nbsp;&nbsp;&nbsp;`r(k=3) = coverage/3 + 0.2000` → `r(k=10) = coverage/3 + 0.6667`
 
-*(b = gated right where fixed-`k` wrong; c = the reverse.)* Every one is null
-individually, but `c > b` in **all four**, totalling b=9 against c=24. Four
-conditions failing in the same direction is weak evidence individually and
-consistent evidence jointly: on comparison questions, expanding at all is the
-mistake.
+and **+0.4667 of every expansion's gain in `r` is mechanical.**
 
-Splitting comparison EM by whether the condition actually expanded (small
-cells, indicative only):
-
-| condition | expanded | did not expand |
-|---|---|---|
-| (b) `max(e,n,c)` | 0.1154 (n=52) | **0.1852** (n=27) |
-| (b) `e` | 0.1077 (n=65) | 0.1429 (n=14) |
-| **(c) I-GATE** | **0.1270** (n=63) | **0.0625** (n=16) |
-| (b) `1-n` | 0.1207 (n=58) | 0.0476 (n=21) |
-
-For `max(e,n,c)` and `e`, declining was associated with *higher* EM — the gate
-withheld expansion where withholding helped. For the I-gate the relation is
-**inverted**: its 16 non-firing decisions scored 0.0625 against 0.1270 for the
-ones it expanded. Its selectivity is not merely absent but mildly
-anti-correlated with where selectivity pays. At n=16 this is indicative, not
-established.
-
-### What this means for the claim
-
-The narrowed claim registered in Phase 0 was *expansion conditioned on a
-decomposed evidence state, where indeterminacy specifically triggers
-expansion*. The decomposition **selects different questions** from a scalar
-trigger — demonstrably, at 72.3% overlap against a 71.4% floor — and selecting
-them differently does **not** select them better. Against the pre-registered
-stop condition, the claim fails.
-
-What survives is weaker and must be stated as such: **expansion triggered on
-the evidence state beats no expansion** (p=0.0011 on the recoverable-miss
-subset), which is the FLARE/CRAG/Adaptive-RAG result reproduced in a
-training-free setting, not a new one.
-
-**Phases 4 and 5 were not run**, as the pre-registration requires. No threshold,
-weight, lambda or target was adjusted after the verdict.
-
-## Phase 2: Track B retrieval metrics (HotpotQA distractor)
-
-```bash
-python experiments/run_hotpot_retrieval.py      # N=400, seed 20261019
-```
-
-Properties of the retriever alone — no reader, no NLI, no policy — so they are
-shared by every condition in Phases 3 and 5 and are reported once. N = 400
-stratified sample (321 bridge / 79 comparison), paragraph-level retrieval with
-`all-MiniLM-L6-v2`. Gold is always exactly 2 paragraphs, so per-instance recall
-takes only the values 0, 0.5 and 1.
-
-| k | Recall@k | 95% CI | context precision@k | sentence recall@k |
-|---:|---:|---:|---:|---:|
-| 1 | 0.4088 | [0.361, 0.457] | 0.8175 | 0.4122 |
-| 2 | 0.6150 | [0.567, 0.663] | 0.6150 | 0.6187 |
-| 3 | 0.7013 | [0.656, 0.746] | 0.4675 | 0.7033 |
-| 5 | 0.8137 | [0.776, 0.852] | 0.3255 | 0.8177 |
-| 10 | 1.0000 | [1.000, 1.000] | 0.2005 | 1.0000 |
-
-**MRR = 0.8904** (first gold paragraph) · **nDCG@10 = 0.8431**
-
-Two of these are not results and must not be read as any:
-
-- **Recall@10 = 1.0 on 400/400 instances is an index-completeness check.** Every
-  paragraph an instance owns is indexed, so retrieving ten of at most ten
-  retrieves the gold necessarily. It confirms the harness indexes what it
-  claims to and says nothing about the retriever.
-- **Context precision@k falls as k grows** (0.8175 → 0.2005) purely because the
-  numerator is capped at 2 gold paragraphs while the denominator is k. It is
-  arithmetic, not degradation.
-
-The informative figures are the middle rows. At k=2 — two retrieved for two gold,
-the fairest single comparison — **both** gold paragraphs are retrieved on only
-**30.0%** of instances, and **neither** on **7.0%**. MRR of 0.8904 against
-Recall@1 of 0.4088 says the retriever reliably puts *one* gold paragraph near the
-top and routinely misses the second, which is the characteristic multi-hop
-failure: the bridge entity is not mentioned in the question.
-
-### Sentence-level recall is reported separately, on purpose
-
-Supporting facts are published per **sentence**; retrieval here operates on
-**paragraphs**. Sentence recall tracks paragraph recall closely (0.6187 vs 0.6150
-at k=2) because gold sentences are concentrated in the gold paragraphs, but the
-two are different quantities and conflating them would overstate what retrieval
-delivered. Both are given at every k.
-
-### By question type
-
-| type | n | R@2 | R@3 | R@5 | MRR | nDCG@10 |
+| | min | max | mean | variance | r > 0.5 | mean dr |
 |---|---:|---:|---:|---:|---:|---:|
-| bridge | 321 | 0.5779 | 0.6589 | 0.7773 | 0.8717 | 0.8217 |
-| comparison | 79 | 0.7658 | 0.8734 | 0.9620 | 0.9662 | 0.9303 |
-
-**Comparison questions are much easier to retrieve for**, by a wide margin at
-every k (R@3 0.873 vs 0.659). The reason is structural: a comparison question
-names both entities explicitly ("Were Scott Derrickson and Ed Wood of the same
-nationality?"), so both gold paragraphs are lexically and semantically close to
-the query. A bridge question names only the first entity and the second must be
-reached through it, so the dense retriever has nothing to match on. This is worth
-stating because the same two types invert on **answering**: comparison questions
-are far easier to retrieve and far harder to answer, 30.8% of them being yes/no
-and unreachable by a span reader.
-
-### A defect this exposed in the retriever
-
-`DenseRetriever.retrieve` returns `Evidence(text, relevance)` and **does not
-propagate the `Document` id**. Document identity is therefore lost at the
-retrieval boundary, which has two consequences:
-
-1. The experiment has to recover each paragraph's title by reverse-mapping its
-   text, which is what `run_hotpot_retrieval.py` does.
-2. More seriously, the scorer receives `sources=None`, so the **`diversity`
-   component of `r` silently degrades** rather than being computed. Combined
-   with `connectivity` being unavailable (no graph is built for HotpotQA), only
-   `coverage` and `support_count` can vary on this corpus — two of four
-   components, against one of four on FEVER.
-
-Phase 3 re-attaches sources explicitly when constructing `Evidence` so the
-component is not silently zeroed. The underlying retriever is left unchanged:
-`retrieval.py` is not modified mid-experiment.
-
-## RQ1: pairwise `disagree` resists dilution — the proof
-
-Pre-registered as RQ1 in [`PREREGISTRATION.md`](PREREGISTRATION.md). The
-measurement already existed (below); this is the two-direction argument for why
-it comes out that way, which is what makes it a property of the operator rather
-than a fact about one evidence set.
-
-Notation: passages `i = 1..n` with relevance weights `w_i > 0` and per-passage
-NLI outputs `(e_i, n_i, c_i)`. Write `W = Σ w_i`.
-
-### Direction 1 — mean-pooled aggregation is dilution-sensitive by construction
-
-The pooled form first collapses the per-passage outputs to weighted means,
-
-&nbsp;&nbsp;&nbsp;&nbsp;`ē = Σ wᵢeᵢ / W`,&nbsp;&nbsp;`c̄ = Σ wᵢcᵢ / W`,
-
-and then takes `disagree = 2·min(ē, c̄)`.
-
-Add one passage `j` that is neutral: `e_j ≈ 0`, `c_j ≈ 0`, `w_j > 0`. The new
-means are
-
-&nbsp;&nbsp;&nbsp;&nbsp;`ē' = (Σ wᵢeᵢ + w_j e_j) / (W + w_j)`,&nbsp;&nbsp;
-`c̄' = (Σ wᵢcᵢ + w_j c_j) / (W + w_j)`.
-
-The denominator strictly increases by `w_j`. Neither numerator increases, since
-`w_j e_j ≈ 0` and `w_j c_j ≈ 0`. Hence `ē' < ē` and `c̄' < c̄` strictly, provided
-the corresponding numerator was non-zero. `min` is monotone non-decreasing in
-each argument, so
-
-&nbsp;&nbsp;&nbsp;&nbsp;`2·min(ē', c̄') < 2·min(ē, c̄)`.
-
-Every neutral passage added therefore strictly lowers the conflict signal. The
-decay is monotone and unbounded below: adding enough neutral passages drives
-`disagree` to 0 regardless of how sharply two passages contradict each other.
-**This is not a tuning artefact — it is what averaging means.**
-
-### Direction 2 — pairwise aggregation is invariant
-
-The pairwise form never pools. It takes
-
-&nbsp;&nbsp;&nbsp;&nbsp;`disagree = 2 · max_{(i,j)} min(eᵢ, c_j)`
-
-over ordered pairs of distinct passages. Let `M = max_{(i,j)} min(eᵢ, c_j)` over
-the original set.
-
-Adding passage `j*` with `e_{j*} ≈ 0`, `c_{j*} ≈ 0` does two things and only two:
-
-1. **It leaves every existing pair intact.** The pairs `(i,j)` among the original
-   passages are unchanged, because no term in `min(eᵢ, c_j)` depends on any other
-   passage or on `n`. So `M' ≥ M`: the max is taken over a superset.
-2. **The pairs it adds cannot raise the max.** A new pair is either `(j*, j)`,
-   contributing `min(e_{j*}, c_j) ≤ e_{j*} ≈ 0`, or `(i, j*)`, contributing
-   `min(eᵢ, c_{j*}) ≤ c_{j*} ≈ 0`. Both are `≈ 0 ≤ M`. So `M' ≤ max(M, 0) = M`.
-
-Together `M' = M`. The signal is **invariant** to neutral passages, exactly:
-not approximately, and not because of clamping. `max` is the right aggregator
-here precisely because conflict is an **existential** property of a set — "some
-pair disagrees" — whereas a mean answers a **universal** question, "how much
-does the set disagree on average", which is not what the policy needs to know.
-
-### The measurement this predicts
-
-```bash
-python experiments/check_conflict_dilution.py --nli real
-```
-
-| filler passages added | 0 | 1 | 2 | 3 | 4 | spread |
-|---|---:|---:|---:|---:|---:|---:|
-| `disagree` OLD (pooled) | 0.847 | 0.643 | 0.525 | 0.452 | 0.400 | **0.446** |
-| `disagree` NEW (pairwise) | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | **0.000** |
-| raw, unclamped | 1.739 | 1.739 | 1.739 | 1.739 | 1.739 | 0.000 |
-
-Both directions are confirmed. The pooled row decays monotonically, as Direction
-1 requires. The pairwise row is flat, as Direction 2 requires — and the **raw,
-unclamped** row is flat at 1.739 at every filler count, which rules out the one
-alternative explanation: the flatness is genuine invariance, not the clamp at
-1.0 hiding a decay.
-
-### Scope — what this does and does not distinguish
-
-**It does distinguish the operator from mean-pooled NLI aggregation.** That is
-the standard construction in NLI-based RAG verification, and it is SURE-RAG's
-own weak baseline, so the comparison is against a real and current practice
-rather than a straw man.
-
-**It does not distinguish it from Dempster-Shafer methods, and must not be
-claimed to.** In a DS framework a neutral passage contributes a *vacuous* mass
-assignment, and vacuous mass is the **neutral element of the combination rule by
-construction** — so dilution-invariance is automatic there and is not a result.
-EvidentialRAG (arXiv 2607.10491) is such a method. Against ERAG the honest
-statement is that both are dilution-invariant, by different routes, and this
-proof buys nothing. What survives as a distinction is in RQ3, not here.
-
-A second limit: the proof assumes `e_j ≈ 0` *and* `c_j ≈ 0`, i.e. genuinely
-neutral filler. A passage that is partly entailing or partly contradicting is
-not filler, and *should* move the signal. Invariance is claimed only for the
-neutral case.
-
-## Step 6: pairwise `disagree` — fixes F6 and F8
-
-`scoring.py`: `disagree = 2·min(e, c)` on the pooled means becomes
-`2·max over pairs (i,j) of min(e_i, c_j)` on the per-passage outputs. `T`, `F`,
-`I` and `lambda` byte-identical.
-
-```bash
-python experiments/check_conflict_dilution.py --nli real
-```
-
-| filler passages added | 0 | 1 | 2 | 3 | 4 | spread |
-|---|---:|---:|---:|---:|---:|---:|
-| `disagree` OLD (pooled) | 0.847 | 0.643 | 0.525 | 0.452 | 0.400 | **0.446** |
-| `disagree` NEW (pairwise) | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | **0.000** |
-| raw, unclamped | 1.739 | 1.739 | 1.739 | 1.739 | 1.739 | 0.000 |
-
-The raw value is identical at every filler count, so the flatness is genuine
-invariance, not clipping. `F` itself still drifts 0.906 → 0.692 (spread 0.214)
-because `F = r·c + λ·disagree` and the pooled `c` falls as filler is added; only
-the `disagree` term was ever expected flat. After the Decision-2 target
-calibration `r` no longer falls with it — it is flat at **0.958** across the
-whole sweep, because `support_count` saturates at the first passage — so the
-residual drift in `F` is now attributable to the pooled `c` alone.
-
-**F8 is fixed.** The flagship drug-trial case now returns **SURFACE_CONTRADICTION
-with F = 0.906** (real NLI) against `tau_F = 0.40`, versus the memo's F = 0.347
-and ABSTAIN. It still fires with 4 filler passages added (F = 0.692).
-
-Mass identity still broken (2.499e-01). FEVER `e`/`n`/`c` **bit-identical** — with
-one caveat: `fever_run_200_gateA.csv` stores the *pooled* triple per claim, so on
-replay every passage carries the same values and pairwise ≡ pooled by
-construction for **all** row sizes, not only the 185 single-passage ones.
-`fever_run_200_current.csv` records a per-row `disagree` column taken from the
-real per-passage outputs, so figures derived from it do not share that defect.
-
-## Step 9: CONFLICTS — run, halted, and not interpretable as intended
-
-Dataset: Cattan et al., arXiv 2506.08500,
-[google-research-datasets/rag_conflicts](https://github.com/google-research-datasets/rag_conflicts).
-458 instances, 9.20 passages each, 8.33 domains each. **The release publishes no
-retrieval score** — relevance is derived as question–passage cosine similarity
-(see `conflicts.RELEVANCE_SOURCE`). Scored a seeded stratified sample of 130
-instances / 1210 passages (~107 min CPU).
-
-```bash
-python experiments/score_conflicts.py && python experiments/run_conflicts_eval.py
-python experiments/diagnose_conflicts_hypothesis.py
-```
-
-### The headline numbers, and why they must not be read at face value
-
-| | result | stop condition |
-|---|---|---|
-| 3b `disagree` by type | Conflicting opinions median **0.222** vs No conflict median **0.556**; Mann-Whitney p = 2.14e-03 — **reversed** | triggered |
-| 3c policy test | exact-match **0.267** (CI 0.175–0.358, n=90); SURFACE_CONTRADICTION recall **0.200**, firing on 20/45 *No conflict* vs 9/45 *Conflicting opinions* | triggered |
-| 3a/3d r-ablation | **null**: r=0.9 and r=sufficiency agree on **128/130** | uninformative |
-
-**The cause is a measurement error.** CONFLICTS is a QA dataset; its instances
-are *questions* ("what is the most common blood type"), and each question was
-passed to the NLI model as the hypothesis. Entailment against an interrogative
-is not a well-posed problem, and the output shows it: median entailment 0.709
-(59.6% above 0.5), **median contradiction 0.017**. The model marks any on-topic
-passage "entailing" and emits arbitrary contradiction scores.
-
-Concretely: the highest-`disagree` *No conflict* instance pairs a blood-type
-frequency table (e=0.985) against a generic "Blood Types — as you probably
-know…" intro (c=0.993) — neither contradicts anything. The lowest-`disagree`
-*Conflicting opinions* instance has max contradiction **0.014** across 7
-passages, because none of them contradicts a question. `correct_answer` is
-non-empty for only 237/458 instances, so this cannot be patched by forming
-question+answer claims.
-
-**So 3b and 3c are not evidence that `disagree` or the policy are wrong.** They
-are evidence that the scorer was applied outside its task definition.
-
-### What the run does establish
-
-`support_count` and `diversity` **saturate at 1.0** on every instance (≥5
-passages, ≥3 domains, frozen target 3); `r` spans only 0.867–1.000 with 0/130
-below 0.5. FEVER spans [0.500, 1.000] with a median of 0.750 and 17/200 rows at
-`r ≤ 0.5`; CONFLICTS pins it high. **Neither venue exercises `r` across its full
-range**, which is a property of the components' targets, not of either dataset.
-Reported, not retuned.
-
-*(Before the Decision-2 calibration FEVER's median was 0.417 with 143/200 below
-0.5, and the sentence above read "FEVER pinned `r` low". Calibrating the targets
-moved FEVER into the upper half of the range; it did not widen it.)*
-
-## Decision 2: saturation targets, derived from depth alone
-
-```bash
-python experiments/derive_targets.py     # reads depth only; prints no accuracy
-```
-
-**No fixed target can work, and on FEVER none works at all.** FEVER's passage
-count is a point mass — p25 = median = p75 = p90 = **1**, with 92.5% of
-instances at k=1 — so a saturating function of k cannot manufacture variance the
-input does not contain. CONFLICTS is concentrated at 8–10, and at the old target
-of 3 both count components were **100% saturated, std exactly 0.000**. The two
-requirements are mutually exclusive.
-
-The real defect in `target=3` was **bias, not lost discrimination**: FEVER's
-`support_count` sat at the constant 0.333 and subtracted from `r` on every
-instance, which is what put 143/200 below the F12 cliff.
-
-**Rule adopted: target = p75 of that corpus's own depth distribution.** Not max
-(outlier-driven), not median (saturates half the corpus by construction), and
-explicitly *not* the spread-maximising value — that is still fitting, even to
-depth. `fever.SUPPORT_TARGET = 1`, `conflicts.SUPPORT_TARGET = 10`,
-`conflicts.DIVERSITY_TARGET = 9`, module fallback 1 (unbiased).
-
-| prediction, committed in `53d305e` before any run | outcome |
-|---|---|
-| FEVER r median 0.417 → **0.750** | **0.750** ✓ |
-| FEVER instances at r ≤ 0.5: 143/200 → **17/200** | **17/200** ✓ |
-| CONFLICTS r median 1.000 → **0.930**, pstdev 0.0297 → **0.0856** | **0.930 / 0.0856** ✓ |
-
-## Decision 1: pairwise mode, and its sanity gate
-
-```bash
-python experiments/check_pairwise_sanity.py --nli real
-```
-
-`T` is **corroboration** in this mode — mutual agreement between sources, never
-"support for the claim". The query is used only for retrieval sufficiency and is
-never passed to the NLI model as a hypothesis (asserted structurally by
-`test_query_is_never_passed_to_the_nli_model`).
-
-| case | corroboration | contradiction | neutrality | dominant | expected |
-|---|---:|---:|---:|---|---|
-| contradicting | 0.000 | **1.000** | 0.001 | F | F ✓ |
-| agreeing | **0.997** | 0.001 | 0.003 | T | T ✓ |
-| unrelated | 0.007 | 0.002 | **0.984** | I | I ✓ |
-
-Against claim mode's **median contradiction of 0.017** on this corpus. The gate
-costs a minute and runs before any experiment, because the previous venue
-attempt spent 107 minutes before its framing error surfaced.
-
-**A bug this caught, in my own code:** `pairwise_breakdown` first computed
-sufficiency on the *capped* passage set, so every CONFLICTS instance showed
-exactly `max_passages=5` and `support_count` re-saturated at a constant 0.5 —
-reintroducing the exact defect Decision 2 removes. `r` now uses the full
-retrieved set; the cap is a compute budget on the O(k²) comparison only.
-
-## FEVER regression under the new targets
-
-```bash
-python experiments/run_r_ablation.py     # replays fever_run_200_current.csv; model not re-run
-```
-
-| condition | accuracy | macro-F1 |
-|---|---:|---:|
-| (a) `r = 0.9` constant | 0.7550 | 0.7571 |
-| (b) `r = sufficiency` | **0.6650** | 0.6730 |
-| raw `argmax(e,n,c)` | 0.7550 | 0.7574 |
-
-**(b) − (a) = −0.0900**, improved from −0.2950 under the old targets but **still
-negative and significant**: McNemar b=0, c=18, p=0.0000. Computed `r` does not
-win a single row that it loses. `r` now spans 26 distinct values, median 0.750.
-Reported, not tuned.
-
-## Task 4: the policy test in pairwise mode — BOTH stop conditions fired
-
-```bash
-python experiments/score_conflicts_pairwise.py      # 100 instances, 2000 pairs
-python experiments/run_conflicts_pairwise_eval.py
-python experiments/diagnose_pairwise_reversal.py
-```
-
-### Stop condition 2 — contradiction reverses again
-
-| conflict type | n | median contradiction | median corroboration |
-|---|---:|---:|---:|
-| Conflicting opinions | 40 | **0.100** | 0.878 |
-| No conflict | 40 | **0.331** | 0.757 |
-| Complementary information | 10 | 0.667 | 0.709 |
-| Outdated information | 10 | 0.888 | 0.911 |
-
-Mann-Whitney U=525, z=−2.65, **p = 8.14e-03** — significantly **higher on
-No conflict**. The prediction was the opposite.
-
-### Stop condition 3 — the policy fires on the wrong class
-
-| conflict type | answer | expand | surface_contradiction | n |
+| **base, k=3** | 0.3111 | 0.5333 | 0.4546 | 0.001981 | **59/400 (14.8%)** | — |
+| (c) I-GATE final | 0.3905 | 1.0000 | 0.7939 | 0.044618 | **324/400** | 0.4363 |
+| (b) `max(e,n,c)` | 0.3111 | 1.0000 | 0.8198 | 0.048450 | 321/400 | 0.4697 |
+| (b) `1-n` | 0.3429 | 1.0000 | 0.8362 | 0.046919 | 321/400 | 0.4908 |
+| (b) `e` | 0.3212 | 1.0000 | 0.8417 | 0.046600 | 323/400 | 0.4978 |
+
+The fraction with `r > 0.5` goes **14.8% → 80–81% purely by expanding**, and
+`dr` is never negative on any of 311 expanders.
+
+| condition | dr at k=6 | dr at k=10 | within-depth var | **η² of dr from final_k** |
 |---|---:|---:|---:|---:|
-| Conflicting opinions | 18 | 15 | **7** | 40 |
-| No conflict | 9 | 16 | **15** | 40 |
-| Complementary information | 1 | 4 | 5 | 10 |
-| Outdated information | 1 | 2 | 7 | 10 |
+| **(c) I-GATE** | 0.2239 (n=80) | 0.5099 (n=231) | 0.001464 | **0.9144** |
+| (b) `max(e,n,c)` | 0.2189 (n=39) | 0.5057 (n=272) | 0.001302 | 0.8739 |
+| (b) `1-n` | 0.2188 (n=19) | 0.5085 (n=292) | 0.001552 | 0.7562 |
+| (b) `e` | 0.2221 (n=11) | 0.5079 (n=300) | 0.001578 | 0.6384 |
 
-SURFACE_CONTRADICTION fires on **17.5%** of Conflicting opinions vs **37.5%** of
-No conflict. Exact-match accuracy **0.200** (95% CI 0.112–0.288, n=80);
-surface_contradiction recall 0.175, answer recall 0.225.
+**`final_k` alone explains 91.4% of the I-gate's variance in `dr`** — the
+highest of the four, and it is the gate whose trigger actually reads `r`.
 
-**On this evidence the policy's central claim is unsupported.**
+Since `T = r·e ≤ r` and `I ≥ 1-r`, the gate `I > T` is pushed toward **true**
+before expanding and toward **false** after it, by arithmetic on the retrieval
+depth *the gate itself chose*. That is the mechanism of the null.
 
-### This is not the previous measurement error
+**A correlation that must not be read as evidence.** `dr` does correlate with
+whether expansion fetched the gold (rho 0.436 for the I-gate, p<0.0001), but the
+confound is unrepairable in this data: k=10 retrieves every paragraph, so
+`gold_in_context` is **1.0000 at k=10 by construction** for all four conditions,
+and `dr` is near-constant within each depth. The chain is `dr → depth → helped`.
 
-Pairwise mode **passed its sanity gate** on real NLI, so the instrument works.
-The mechanism, from `diagnose_pairwise_reversal.py`:
+**A limitation on re-analysis.** `results/hotpot_gate.csv` stores only the depth
+each condition *selected*, not an answer at every candidate depth. All three
+depths exist for 113/400 questions and k=6 for only 124/400, so an arbitrary
+gate rule **cannot** be replayed offline without re-running the model pass.
 
-- **Real conflicts are hedged, and NLI reads them as agreement.** The
-  lowest-contradiction Conflicting-opinions instance pairs *"some companies
-  require a degree, but it's becoming less…"* against *"anyone can become
-  proficient"* — max entailment **0.992**, max contradiction **0.006**.
-- **Different aspects produce spurious contradiction.** The
-  highest-contradiction No-conflict instance pairs *"Starmer became PM on 5 July
-  2024"* against *"there is no specific date for when the office first
-  appeared"* — **c = 0.999**. Both true, different questions.
-- Per-pair contradiction is rare (median 0.021; 5.7% of 2000 pairs above 0.5),
-  so a max over 20 pairs is an order statistic latching onto the rare spurious
-  pair.
-- **The reversal is not an artefact of `max`:** the mean over pairs reverses too
-  (−0.053). The per-pair signal itself is anti-correlated with annotated
-  conflict. Reported as a diagnostic only — the statistic was **not** changed
-  after seeing which way it separates.
+---
 
-**Unresolved confound:** the top-5 cap keeps the passages most similar to the
-*question*, and a passage restating the question outranks one disputing its
-premise, so the cap is not conflict-neutral. Not testable from this cache.
+# Part 6 — The design rule
 
-**Cost:** projected 2.49 h, actual **12.8 h** (23.0 s/pair against a 4.48 s/pair
-probe). The probe was unrepresentative; the stated 3-hour ceiling was breached.
+Four requirements, each derived from a measurement above rather than from
+preference. Fuller statement in [`PREREGISTRATION.md`](PREREGISTRATION.md)
+Addendum 3(e).
 
-## RETRACTED
+1. **Saturation target strictly below the candidate pool size.** With
+   `target = 10` and a pool of 10, the count-based components are pinned at
+   `k/target` for any fixed `k` and any target — zero variance.
+2. **Depth-invariant or depth-normalised sufficiency terms.** Any
+   `min(1, count/target)` term is monotone in how many passages were fetched.
+   When the gate's own action changes that count, the gate reads back its own
+   decision — η² = 0.9144.
+3. **Keep `r` above 0.5 with real variance.** Below it, `I ≥ 1-r > r ≥ T` for
+   *every possible* NLI output and "well supported, do not expand" is
+   unrepresentable. It was unrepresentable on **82% of this sample**.
+4. **An outcome label that still varies at maximum depth.** On HotpotQA
+   distractor, `gold_in_context` and `Recall@k` are both degenerate at k=10.
 
-These numbers appear in the First Review report and must not be reused as written.
+**The one-line rule:** *a sufficiency signal must not be a monotone function of
+the retrieval depth that the gate reading it controls.*
 
-### 1. `0.745` as a NeutroRAG result — RETRACTED
+A construction satisfying all four has **not** been tested. The negative result
+here is a verdict on this construction at this operating point — and requirement
+3 was violated on 82% of the sample before any evidence was consulted.
 
-*This section describes the **Gate A** measurement, i.e. the construction as
-submitted. The current construction scores lower still — see the RQ1 subsection
-under "Current, defensible numbers".*
+---
 
-The figure itself reproduces exactly, but it is **not attributable to the
-neutrosophic layer**. Running `argmax` directly on the NLI head's own
-distribution, using the *identical* model calls, scores **0.7550** — higher.
+# Part 7 — Prior findings, retained
 
-| system | accuracy | 95% CI (Wald) | macro-F1 |
+These predate the rescope and are kept as motivation and limitations. They are
+**not** withdrawn.
+
+### FEVER failure-type attribution — the decomposition loses
+
+*Regenerated by `python experiments/reproduce_all.py` and
+`python experiments/make_results_table.py --csv fever_run_200_current.csv`*
+
+| | current construction | Gate A (as submitted) |
+|---|---:|---:|
+| `argmax(T,I,F)` | **0.6650** ± 0.0334 | 0.7450 ± 0.0308 |
+| `argmax(e,n,c)` baseline | **0.7550** ± 0.0304 | 0.7550 |
+| difference | **−0.0900** | −0.0100 |
+| exact McNemar | **b=1, c=19, p=0.0000** | b=1, c=3, p=0.6250 (ns) |
+| rows differing | 20/200 | 4/200 |
+| mass identity deviation | 2.28e-01 (**broken**) | 2.22e-16 (held) |
+
+The baseline is identical in both columns because it is a function of `e, n, c`
+only, and those are bit-identical across the two dumps. The gap **widened
+ninefold and became significant** after three repairs (`I = max(1-r, n)`,
+pairwise `disagree`, calibrated targets).
+
+**Mechanism.** On all 20 rows where the systems differ, NeutroRAG predicts `I` —
+not one is a T↔F disagreement — and the baseline is right on 19. Seventeen of
+the 20 carry `r ≤ 0.58`. Every *pinned* `r` in the observed range beats the
+computed one (`r=1.0` → 0.765, `r=0.8` → 0.745, `r=0.6` → 0.735, against
+computed 0.665), so the cost comes from `r`'s spread, not its level: the
+low-`r` tail gets an `I` floor large enough to overwrite a correct NLI
+judgement. `r` itself: 26 distinct values, median 0.750, range [0.500, 1.000];
+17/200 rows at `r ≤ 0.5`.
+
+The frozen dump `fever_run_200_gateA.csv` is retained **byte-identical**
+(SHA-256 `70a3a783…84c6b7`) because the retraction of the 0.745 headline rests
+on it. Nothing in this repository regenerates it.
+
+### The r-ablation — computed `r` is worse than a constant
+
+*Regenerated by `python experiments/run_r_ablation.py`*
+
+| system | accuracy | 95% CI | macro-F1 |
 |---|---:|---:|---:|
-| NeutroRAG `argmax(T,I,F)` | 0.7450 | [0.685, 0.805] | 0.7476 |
-| raw NLI `argmax(e,n,c)` | **0.7550** | [0.695, 0.815] | **0.7574** |
-| difference | −0.0100 | | −0.0098 |
+| (a) `r` = 0.9 constant | 0.7550 | [0.695, 0.815] | 0.7571 |
+| (b) `r` = sufficiency | **0.6650** | [0.600, 0.730] | 0.6730 |
+| raw NLI `argmax(e,n,c)` | 0.7550 | [0.695, 0.815] | 0.7574 |
 
-The two systems differ on **4 of 200** rows. Exact McNemar: b=1, c=3, **p = 0.625** —
-the difference is not statistically significant in either direction. For the
-submitted construction the honest claim was therefore *"the neutrosophic
-construction produces no measurable benefit over the bare classifier on this
-data,"* not *"it is worse."*
+18/200 rows differ; exact McNemar b=0, c=18, **p=0.0000**.
 
-> **That qualification no longer holds for the current code.** Under the
-> construction on `main` the same comparison gives 0.6650 vs 0.7550, a gap of
-> −0.0900 with exact McNemar b=1, c=19, **p = 0.0000** — significant, and in the
-> direction of worse. "No measurable benefit" was the correct reading of the
-> Gate A numbers and remains the correct reading of the *submitted* system; it
-> understates what the current numbers say.
+### Mass identity broken, as the revised Gate B predicted
 
-Corroboration: the model card for `MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli`
-reports **0.777** on the full FEVER-NLI dev set. Our 0.755 on a 200-row subset of
-that same split is consistent with simply re-measuring the classifier.
+*Regenerated by `python experiments/check_mass_identity.py`*
 
-*Source: `results/fever_200_metrics_gateA.md`, from `fever_run_200_gateA.csv`.*
-
-### 2. The fuzzy-collapse ablation delta `+0.205` — RETRACTED
-
-Arithmetic, not an experiment (memo F4). Two independent problems:
-
-- **Ceiling.** With gold counts 65 / 67 / 68, *any* I/F-merged model — even one with
-  a perfect T detector — is capped at (65+68)/200 = **0.665** by the label prior.
-  The delta measures how many gold-I items exist, not representational power.
-- **Recoverable by inspection.** The reported 0.540 = `conf[T][T] + F_gold` =
-  40 + 68 = 108 → 0.540, exactly. A reviewer can derive it from the published
-  confusion matrix in about a minute.
-
-### 3. "T + I + F can exceed 1, demonstrating independence" — RETRACTED as stated
-
-**Status: fixed as of Gate B (revised), but the retraction stands for the numbers
-already reported.** Under the `I = (1-r) + r·n` used for every number in the First
-Review report, `T + I + F = 1 + λ·disagree` identically (max deviation 2.22e-16
-over the 200 rows), so the triple carried one degree of freedom beyond the
-probability simplex, not three, and "mass exceeds 1" merely restated
-"disagree > 0". Under the current `I = max(1-r, n)` the identity is broken
-(deviation up to 0.25) and the mass does carry independent information — see the
-Gate B section above. Any *reported* number predating that change must still be
-described using the old semantics.
-
----
-
-## Current, defensible numbers
-
-### FEVER run (n = 200) — the current construction
-
-`copenlu/fever_gold_evidence` validation split, `MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli`, CPU.
-
-```bash
-python experiments/run_fever_eval.py --limit 200 --csv fever_run_200_current.csv   # ~150s
-python experiments/make_results_table.py --csv fever_run_200_current.csv \
-    --out-prefix fever_200_metrics_current
-```
-
-Full per-class table and both confusion matrices:
-**`results/fever_200_metrics_current.md`**. Per-example dump:
-**`fever_run_200_current.csv`** (200 rows: claim, r, e, n, c, disagree, T, I, F,
-gold, predicted, evidence_count).
-
-This is the construction on `main`: `r` from retrieval sufficiency,
-`I = max(1-r, n)`, pairwise `disagree`, Decision-2 saturation targets.
-
-| quantity | value | note |
-|---|---|---|
-| attribution accuracy `argmax(T,I,F)` | **0.6650 ± 0.0334** | 95% CI [0.600, 0.730] |
-| baseline accuracy `argmax(e,n,c)` | **0.7550 ± 0.0304** | identical NLI calls; unchanged since Gate A |
-| difference | **−0.0900** | macro-F1 −0.0844 (0.6730 vs 0.7574) |
-| rows where predictions differ | 20 / 200 | |
-| McNemar (exact) | **b=1, c=19, p=0.0000** | **significant** at α=0.05 |
-| `N_empty` (memo F3) | **0 / 200** | the leak is live code but fired zero times here |
-| `r` (memo F1, resolved by Gate B) | 26 distinct values, median 0.750, range [0.500, 1.000] | `r` is now a signal, not a constant |
-| `disagree` (memo F6/F9) | median 0.0115, mean 0.0299, max 0.7165; 13/200 rows > 0.1 | conflict term near-inert on FEVER |
-| evidence passages per row | 185 rows have exactly 1 | so there is no pair to compare on most rows |
-| mass identity deviation (memo F5) | **2.275e-01** | identity **broken**, as the revised Gate B predicted |
-| mass `T+I+F` | min 0.775, median 0.988, max 1.277; >1 on 49/200 (24.5%) | |
-
-#### This answers RQ1, and the answer got worse
-
-**RQ1 — does the neutrosophic decomposition beat the classifier alone? No, and
-now significantly so.**
-
-| | Gate A (as submitted) | current construction |
+| check | max \|deviation\| | before |
 |---|---:|---:|
-| `argmax(T,I,F)` | 0.7450 | **0.6650** |
-| `argmax(e,n,c)` baseline | 0.7550 | **0.7550** |
-| difference | −0.0100 | **−0.0900** |
-| McNemar | b=1, c=3, p=0.625 (ns) | **b=1, c=19, p=0.0000** |
+| random draws, `r ~ Uniform(0,1)` | **2.499e-01** | 4.441e-16 |
+| random draws, `r` computed | **2.496e-01** | 4.441e-16 |
+| real run: pipeline corpus + graph | **1.696e-01** | 2.220e-16 |
+| real run: 200 FEVER claims | **2.275e-01** | 2.220e-16 |
 
-Three repairs landed between those columns — `I = max(1-r, n)`, pairwise
-`disagree`, and the calibrated targets — and the gap **widened by a factor of
-nine and became statistically significant**. At Gate A the honest statement was
-"the layer adds nothing measurable". It is now stronger than that: on FEVER the
-layer measurably *destroys* information the NLI head already had. The baseline is
-identical in both columns, as it must be — it is a function of `e`, `n`, `c`
-only, and those are bit-identical across the two dumps.
+Mass `T+I+F` on FEVER: min 0.775, median 0.988, max 1.277; exceeds 1 on
+**49/200 (24.5%)**. Under the old `I` every row exceeded 1 by construction, so
+the two criteria disagree on 75.5% of rows.
 
-The mechanism is visible in the per-class table. Recall on the two decidable
-classes falls (T 0.646 → 0.554, F 0.853 → 0.662) while recall on `I` rises
-(0.761 → 0.776), and precision on `I` falls to 0.500. `I = max(1-r, n)` sets a
-floor of `1-r` under indeterminacy, and on FEVER `r` has a median of 0.750, so a
-floor of ~0.25 is imposed on every row regardless of evidence. Where the NLI head
-was confidently right, that floor is enough to let `I` win the argmax. The
-repair that made the mass identity break genuinely is the same repair that costs
-accuracy here, and the two cannot be separated by tuning — they are the same
-term.
+### CONFLICTS — the policy test, negative
 
-This does not retract the Gate B change. `I = max(1-r, n)` was adopted because
-the old `I` made "T+I+F > 1" an algebraic identity, which is a correctness
-problem independent of accuracy. The honest summary is that fixing it revealed
-the decomposition was carrying less information than the headline suggested, not
-more.
+*Regenerated by `python experiments/run_conflicts_pairwise_eval.py`*
 
-**What this does not say.** FEVER supplies gold, annotator-selected evidence at
-constant relevance, with a single passage on 185/200 rows (memo F9). Three of
-`r`'s four components cannot vary there and the conflict term has nothing to
-compare, so this is close to a worst case for the construction — it is the
-corpus least able to reward retrieval-side signal. That is an argument for
-measuring on a corpus with real retrieval depth, not an argument that the number
-here is wrong. The CONFLICTS test was that measurement, and it also came out
-negative.
+Median contradiction 0.100 on genuinely conflicting instances against 0.331 on
+non-conflicting ones — **the wrong way round**. Mann-Whitney U=525, z=−2.65,
+**p=8.14e-03**. The action fires on 7/40 (17.5%) of conflict instances and
+15/40 (37.5%) of non-conflict. Expected-action accuracy 0.200, 95% CI
+[0.112, 0.288]. Both pre-registered stop conditions fired.
 
-### The frozen Gate A dump
+Diagnosis: real-world disagreement is hedged ("some studies suggest" against
+"others found no effect") and an NLI contradiction head scores that as
+agreement. It detects propositional negation, not evidential disagreement.
 
-**`fever_run_200_gateA.csv`** is the per-example dump for the construction
-exactly as submitted at First Review: **constant `r` = 0.9**, **`I = (1-r) + r·n`**,
-and **pooled `disagree` = 2·min(e, c)**. It is retained **unmodified** —
-byte-identical to the file committed as `fever_run_200.csv`, SHA-256
-`70a3a783…84c6b7` — because the retraction of the 0.745 headline rests on it.
-Nothing in this repository should regenerate or overwrite it.
+### Contamination
 
-```bash
-python experiments/make_results_table.py --csv fever_run_200_gateA.csv \
-    --out-prefix fever_200_metrics_gateA
-```
+*Regenerated by `python experiments/check_contamination.py`*
 
-| quantity | Gate A value | note |
+0/196 overlap with the FEVER-NLI **train** split; **196/196 (100%)** with the
+**dev** split. The 200 evaluated claims *are* the model's own reported
+development split, and every FEVER figure here must be disclosed as such rather
+than presented as held-out.
+
+### Three retractions, standing
+
+1. **`0.745` as a NeutroRAG result.** Raw `argmax(e,n,c)` on identical NLI
+   calls scores 0.7550. Retracted.
+2. **The fuzzy-collapse ablation delta (`+0.205`).** Arithmetic, not an
+   experiment: any I/F-merged model is capped at (65+68)/200 = 0.665 by the
+   label prior, and the reported 0.540 is recoverable by summing two columns of
+   the published confusion matrix. **Withdrawn as a number entirely** — no
+   command in this repository reproduces it, by design.
+3. **"T + I + F can exceed 1, demonstrating independence."** Under the submitted
+   `I = (1-r) + r·n` the identity `T+I+F = 1 + λ·disagree` held to 2.22e-16, so
+   "mass exceeds 1" merely restated "disagree > 0". Fixed as of the revised
+   Gate B, but the retraction stands for the numbers already reported.
+
+### The Section 5(d) screenshot no longer reproduces
+
+*Regenerated by `python experiments/run_pipeline_demo.py --nli real`*
+
+| | submitted report | current code |
 |---|---|---|
-| attribution accuracy `argmax(T,I,F)` | 0.7450 ± 0.0308 | the submitted headline; RETRACTED above |
-| baseline accuracy `argmax(e,n,c)` | 0.7550 ± 0.0304 | identical NLI calls |
-| rows where predictions differ | 4 / 200 | |
-| McNemar (exact) | b=1, c=3, p=0.625 | not significant |
-| distinct values of `r` (memo F1) | `{0.9}` | `r` was a constant, not a signal |
-| mass identity deviation (memo F5) | 2.22e-16 | identity **held** — which is why it was retracted |
-
-Its `claim`, `e`, `n`, `c`, `gold_*` and `evidence_count` columns are still
-valid and are what every replay experiment (`run_r_ablation.py`,
-`run_sensitivity_sweep.py`) consumes; its `r`, `T`, `I` and `F` columns describe
-the superseded construction and must never be quoted as current.
-
-### Contamination check (memo F10)
-
-```bash
-python experiments/check_contamination.py
-```
-
-| against FEVER-NLI split | claim-text overlap | claim-ID overlap |
-|---|---:|---:|
-| **train** | 0 / 196 (0.0%) | 0 (0.0%) |
-| **dev** | **196 / 196 (100%)** | **196 (100%)** |
-
-**No training contamination.** But the 200 evaluated claims *are* the FEVER-NLI dev
-set, and the model card states the model "was evaluated using … the dev set for
-Fever-NLI". Numbers measured here must be disclosed as measured on the model's own
-reported development split, not presented as held-out.
-
-Unresolved, and what would settle it:
-1. Whether dev was used for checkpoint selection. The published `TrainingArguments`
-   show a fixed `num_train_epochs=3` with no early stopping, which argues against it,
-   but hyperparameters may still have been chosen by looking at dev. Only the
-   author's training logs would settle this.
-2. Whether `pietrolesci/nli_fever` is byte-identical to the split the model author
-   used. It is a community re-host; the model card links no specific split file.
-
-### Pipeline demo — the report's Section 5(d) screenshot no longer matches
-
-```bash
-python experiments/run_pipeline_demo.py --nli real
-```
-
-**The screenshot in the submitted report is a historical artefact of the submitted
-code, and this run no longer reproduces it.** Both the triple and the action have
-changed:
-
-| | submitted report (screenshot) | current code (post-Step-6) |
-|---|---|---|
-| triple | `TIF(T=0.223, I=0.603, F=0.347)` | `TIF(T=0.209, I=0.603, F=0.663)` |
-| steps | identical at steps 0, 1, 2 | a single step 0 |
+| triple | `TIF(0.223, 0.603, 0.347)` | `TIF(0.209, 0.603, 0.663)` |
 | action | **ABSTAIN** | **SURFACE_CONTRADICTION** |
-| `expansions_used` | 2 | 0 |
+| expansions | 2 | 0 |
 
-**The flip is the memo F8 conflict fix propagating into the full pipeline.** At
-submission, conflict was computed as `2·min(e, c)` on the relevance-weighted *pooled*
-means. The demo retrieves six passages, of which four are filler — a formulary note,
-an approval date, an age-prevalence fact and an off-topic line about the stock market.
-Pooling averaged the one contradicting passage against those four, so `F` fell to
-0.347, below `tau_F` = 0.40, and the system abstained on the single example built to
-showcase SURFACE_CONTRADICTION. Conflict is now the strongest opposition between *any*
-entailing and *any* contradicting passage,
-`disagree = 2·max_{i,j} min(e_i, c_j)`, which is a set-level property and does not
-dilute. `F` rises to 0.663, clears `tau_F`, and the action fires at step 0.
-
-That is the mechanism working end to end rather than abstaining, and it is the one
-place in the repository where an audit finding can be seen to change a pipeline
-outcome. Two caveats belong with it:
-
-- **This is one hand-built trace, not a result.** The same F8 fix, measured against
-  external ground truth on the CONFLICTS dataset, made the policy test come out
-  *negative* (see *The CONFLICTS policy test* above). A mechanism firing correctly on
-  an example built to exercise it is not evidence that it fires correctly in general,
-  and this section must not be read as if it were.
-- **`expansions_used` dropped to 0 for a reason unrelated to the fix.** The policy now
-  acts at step 0, so it never enters the expansion loop, which means this trace no
-  longer exercises that loop at all. The loop's behaviour is covered by
-  `tests/test_memo_regressions.py::test_expansion_with_a_real_scorer_changes_the_triple`
-  (the triple moves when the retriever returns new passages) and
-  `::test_expansion_is_inert_when_the_retriever_returns_nothing_new` (it does not when
-  the toy corpus is exhausted — which is what produced the three identical steps in
-  the original screenshot). Both pass.
-
-The mock-NLI invocation now reaches the **same action** by a different route:
-`TIF(T=0.407, I=0.323, F=0.728)` → SURFACE_CONTRADICTION, 0 expansions. At submission
-the two backends disagreed on this example; they no longer do. Still quote the
-`--nli real` run and say which backend you ran, because the triples differ.
-
-### Library behaviour (offline, mock NLI)
-
-| quantity | value | command |
-|---|---|---|
-| README quickstart triple | `TIF(T=0.091, I=0.000, F=1.000)` | `python experiments/reproduce_all.py` |
-| README quickstart, with `expand_fn` | ANSWER after 1 expansion | same |
-| README quickstart, without `expand_fn` | ABSTAIN, 0 expansions | same |
-| `MockNLIBackend.predict` sums to 1 | max \|sum − 1\| = 0.00e+00 | `pytest tests/test_memo_regressions.py -k distribution` |
-
-### demo.py — illustrative only, not a research result
-
-`demo.py` runs the **mock** NLI backend over 12 hand-written examples. Its
-attribution figure is **0.833** (n=12) and is a smoke test of the plumbing, not
-evidence of anything; it should not appear in the report as a result.
-
-The fuzzy-collapse delta that this section previously quoted as a number is
-**withdrawn** — see *Retraction 2* above. Merging the gold `I` and `F` classes
-caps the collapsed score at the majority-class prior, so any positive delta is
-arithmetic rather than evidence for the I/F distinction. `demo.py` no longer
-prints it, and `experiments/reproduce_all.py` lists it under `[RETRACTED]` with
-no value, so no command in this repository reproduces it. That is deliberate.
+The flip is the pairwise-conflict fix propagating end to end: pooling averaged
+one contradicting passage against four filler passages, dropping `F` below
+`tau_F` = 0.40. It is one hand-built trace, not a result — the same fix measured
+against external ground truth on CONFLICTS came out negative.
 
 ---
 
-## Test suite
+# Claims withdrawn during analysis
+
+Collected here so none is readable as a live claim. Each is listed with what was
+said, why it was wrong, and the commit that fixed it. Fuller statement in
+[`PREREGISTRATION.md`](PREREGISTRATION.md) Addendum 3(d).
+
+### 1. "`r` is not measuring retrieval adequacy in any way that tracks retrieval success"
+
+**Withdrawn.** It conflated level with rank. `r` *does* rank-correlate with
+Recall@3 (rho 0.2232 pooled, p<0.0001; 0.4338 on comparison). What it lacks is
+**range**, not signal: its absolute level barely differs between question types
+(0.4562 vs 0.4483) while its ordering within a type is informative. The
+overstatement would have supported a stronger negative conclusion than the data
+allow. *Fixed in `c339b98`.*
+
+### 2. The 40-question pilot's verdict (I-gate EM 0.300 vs 0.325)
+
+**Void.** The harness had silently inherited FEVER's saturation targets (1, 1)
+instead of HotpotQA's depth-derived (10, 10). With `1-r ≈ 0.093`, it was the
+active branch of `I = max(1-r, n)` on only 3 of 40 rows — the
+retrieval-sufficiency signal contributed nothing and condition (c) had
+degenerated into "expand when the NLI neutral class dominates". Reporting that
+verdict would have been a **false negative against an implementation in which
+the decomposition was not running**. Declared in Addendum 1 *before* the re-run;
+*fixed in `e19bc4f`*. Retained as
+`results/hotpot_gate_pilot40_VOID_wrong_targets.csv`.
+
+### 3. The first implied-diversity back-substitution (283/388 values above 1.0)
+
+**Withdrawn.** It computed coverage on the question alone, while the gate had
+scored sufficiency on `question + reader_answer`. On the correct hypothesis
+string the implied value is 1.0 to within 1.5e-6. The apparent refutation was an
+artefact of the diagnostic. *Corrected in `e1c03b6`.*
+
+---
+
+# Reproduction
 
 ```bash
-pytest -q          # 98 passed, 6 skipped, 1 xfailed
-NEUTRORAG_TEST_HF=1 pytest tests/test_memo_regressions.py -k hf_backend   # 6 passed (~44s)
+python -m pytest -q                            # full suite
+python experiments/reproduce_all.py            # every claimed number, offline
+python experiments/make_claims_manifest.py     # regenerate results/claims.md
 ```
 
-The **1 xfail is deliberate**: `test_unusable_evidence_is_distinguishable_from_nothing_retrieved`
-documents memo F3 — the scorer cannot distinguish "nothing retrieved" from "retrieved
-but unusable", so both collapse to `TIF(0,1,0)`. It is marked `strict=True`, so if the
-defect is ever fixed the test will fail until the marker is removed deliberately.
-Fixing F3 is downstream of Gate B.
+`reproduce_all.py` prints each figure with the command and commit that produced
+it, and lists retracted figures as `[RETRACTED]` rather than dropping them.
 
-The 6 skips are the opt-in HFNLIBackend distribution tests, which require the real model.
+### Not measured, and not claimed
+
+- **Faithfulness, citation accuracy, AURC, ECE, Brier** — specified for Phase 5,
+  which was not run because the stop condition fired at Phase 3. No value for
+  any of them appears anywhere in this repository.
+- **RQ4's cost comparison** against a published LLM gate — not run.
+- **RQ2 proper** (AUROC of `r` for answerability) — not run. The rank
+  correlation against Recall@3 is a different and weaker quantity.
+- `eval.py`'s `risk_coverage` and `expected_calibration_error` carry two
+  confirmed defects, pinned in `tests/test_eval_calibration.py`: ECE silently
+  drops any item at confidence exactly 0.0, and AURC depends on row order when
+  confidences tie. Since Phase 5 never ran, **no number here depends on
+  either** — they are reported as findings, not fixed.
