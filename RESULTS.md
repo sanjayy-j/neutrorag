@@ -338,11 +338,93 @@ question types** despite retrieval quality differing by 0.21 Recall@3:
 | comparison | 0.4483 | 0.4500 | 0.3111 | 0.5333 | 0.5517 | 65/79 (82.3%) |
 
 `r` differs by **0.008** between a type retrieved at R@3 = 0.873 and one
-retrieved at 0.659. It is not measuring retrieval adequacy in any way that
-tracks retrieval success. And because `r < 0.5` on **82% of the whole sample**,
+retrieved at 0.659, so its absolute level does not distinguish the two types.
+(It does rank-correlate with retrieval success *within* a type — see the
+diagnostics below, which withdraw a stronger claim made in an earlier draft of
+this section.) And because `r < 0.5` on **82% of the whole sample**,
 `T = r·e ≤ r < 1-r ≤ I` there: *"well supported, do not expand" is
 unrepresentable on four questions in five.* This is the Addendum 2 degeneracy
 measured directly, and it is the proximate cause of the RQ3 null.
+
+### Diagnostics: r's failure is COMPOSITION, not inputs
+
+```bash
+python experiments/diagnose_r_components.py      # NLI-free; no accuracy recomputed
+```
+
+**Correction to the claim made above.** The statement that `r` "is not measuring
+retrieval adequacy in any way that tracks retrieval success" was **too strong**
+and is withdrawn. `r` does rank-correlate with per-question Recall@3. What it
+lacks is *range*, not *signal*. Both of the following are true, and the earlier
+text conflated them: `r`'s **absolute level** barely differs between question
+types (0.4562 vs 0.4483), while **within** each type it ranks questions by
+retrieval success significantly.
+
+#### `r` is exactly an affine function of one component
+
+| component | min | max | range | mean | variance | distinct | at 1 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `coverage` | 0.2222 | 1.0000 | 0.7778 | 0.7207 | 0.023640 | 66 | 20 |
+| `support_count` | 0.3000 | 0.3000 | **0.0000** | 0.3000 | **0.000000** | **1** | 0 |
+| `diversity` | 0.3000 | 0.3000 | **0.0000** | 0.3000 | **0.000000** | **1** | 0 |
+| **`r`** | 0.2741 | 0.5333 | 0.2593 | 0.4402 | 0.002627 | 66 | 0 |
+| *[Recall@3]* | 0.0000 | 1.0000 | 1.0000 | 0.7013 | 0.081373 | 3 | 178 |
+
+`connectivity` is **dropped**, not flat: no graph is built for HotpotQA, and
+`sufficiency.py` removes an unavailable component and renormalises rather than
+scoring it 0. So `r` is an equal-weighted mean of three components, two of which
+have **exactly zero variance**. Therefore
+
+&nbsp;&nbsp;&nbsp;&nbsp;`r = 0.3333 * coverage + 0.2000`
+
+verified to `max |predicted - actual| = 1.11e-16` over all 400 questions. `r` is
+confined to **[0.2000, 0.5333]** whatever coverage does, and **cannot reach the
+0.5 decision boundary unless `coverage > 0.9`**. Composition divides coverage's
+variance by 9 (0.02364 -> 0.00263) and caps the result below the F12 threshold.
+
+#### The signal is in the inputs, and it survives ranking
+
+| signal | pooled rho | p | bridge rho | p | comparison rho | p |
+|---|---:|---:|---:|---:|---:|---:|
+| `coverage` | **0.2232** | <0.0001 | 0.2232 | 0.0001 | **0.4338** | 0.0001 |
+| `support_count` | *constant* | — | *constant* | — | *constant* | — |
+| `diversity` | *constant* | — | *constant* | — | *constant* | — |
+| **`r`** | **0.2232** | <0.0001 | 0.2232 | 0.0001 | **0.4338** | 0.0001 |
+| raw `max_relevance` | 0.0196 | 0.6956 | 0.0577 | 0.3030 | 0.1723 | 0.1288 |
+
+`r` has **identical** rho to `coverage`, because Spearman is invariant under a
+monotone transform and `r` is an increasing affine function of it. Composition
+destroys range while preserving rank exactly.
+
+Two consequences worth stating separately:
+
+- **`coverage` carries real signal** — rho 0.2232 pooled and 0.4338 on
+  comparison, both significant. The inputs are not the problem.
+- **`r` decisively beats the raw retriever score**, which has rho 0.0196
+  (p = 0.6956), i.e. no measurable relation to its own retrieval success. This
+  is a *positive* result for `r` and bears on RQ2, though RQ2 proper requires
+  the answerability label rather than Recall@3.
+
+#### Why the two dead components cannot be fixed by retargeting
+
+At a fixed `k`, `support_count = min(1, |{rel >= floor}| / target)` and
+`diversity = min(1, |distinct sources| / target)` are **deterministic functions
+of `k`**: here 3/10 = 0.3 both. Setting the target to 3 would make them 1.0 —
+still constant. **They measure retrieval depth, and the experiment holds depth
+fixed**, so no choice of target makes them informative at fixed `k`. Only
+dropping them, or varying `k` per question, can.
+
+A related defect: the relevance floor of 0.3 **never bound on any of the 1200
+retrieved passages**. `DenseRetriever` remaps cosine from [-1, 1] to [0, 1], so
+`relevance >= 0.3` means `cos >= -0.4`, which essentially every text pair
+satisfies. The floor as written cannot filter anything.
+
+**Diagnosis: composition.** One component with usable signal is averaged with
+two that are mathematically constant, which cuts its variance ninefold and caps
+`r` below the boundary the policy tests against. The inputs are sound; the
+aggregation is not. **No recalibration is applied here** — a derived
+recalibration is to be pre-registered with a held-out split before it touches
+any accuracy number.
 
 ### Comparison questions only: fixed-`k` beats every gated condition
 
