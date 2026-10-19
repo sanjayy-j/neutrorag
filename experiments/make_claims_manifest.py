@@ -439,6 +439,50 @@ def main() -> None:
             "algebraic identity, residual at machine precision", hn,
             "experiments/analyse_h1_comparison.py", H1)
 
+    # ---------------- RQ2 as registered at the proposal ---------------
+    RQ2 = "YES (proposal RQ2)"
+    import importlib.util as _ilu
+    _spec = _ilu.spec_from_file_location(
+        "_rq2", str(REPO / "experiments" / "analyse_rq2_auroc.py"))
+    _rq2 = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(_rq2)
+
+    for sname, gate, diag in (
+        ("Phase 3 sample", RES / "hotpot_gate.csv",
+         RES / "r_component_diagnostics.csv"),
+        ("H1 sample", RES / "hotpot_gate_h1.csv", None),
+    ):
+        if not gate.exists():
+            continue
+        srows = _rq2.load_sample(gate, diag)
+        tag = "P3" if "Phase" in sname else "H1"
+        for lab, what in (("gold_in_context", "retrieval success"),
+                          ("em", "reader success")):
+            y = [r[lab] for r in srows]
+            if not (0 < sum(y) < len(y)):
+                continue
+            auc, se, lo, hi, _m, _n = _rq2.auc_ci([r["r"] for r in srows], y)
+            beats = "above chance" if lo > 0.5 else "NOT above chance"
+            extra = ""
+            if "max_relevance" in srows[0]:
+                a2, _s2, _l2, _h2, _, _ = _rq2.auc_ci(
+                    [r["max_relevance"] for r in srows], y)
+                z, pv = _rq2.delong_test([r["r"] for r in srows],
+                                         [r["max_relevance"] for r in srows], y)
+                extra = (f"; max_relevance AUROC {a2:.4f}, DeLong z={z:.3f} "
+                         f"p={pv:.4f}")
+                test = f"DeLong vs max_relevance: z={z:.3f}, p={pv:.4f}"
+            else:
+                test = ("AUROC with DeLong CI; max_relevance not in any "
+                        "committed artefact for this sample, so the DeLong "
+                        "comparison is not computable offline")
+            row(f"Q2-{tag}-{lab}",
+                f"PROPOSAL-REGISTERED RQ2 ({sname}): AUROC of r for "
+                f"{what} -- {beats}.",
+                f"r AUROC {auc:.4f} (SE {se:.4f}, 95% CI [{lo:.4f}, {hi:.4f}]), "
+                f"{sum(y)} positives of {len(y)}{extra}",
+                test, len(y), "experiments/analyse_rq2_auroc.py", RQ2)
+
     # ---------------- emit --------------------------------------------
     hdr = ("| id | claim (one sentence) | key figures | test & p | n | "
            "regenerating script | pre-registered? |")
@@ -467,6 +511,15 @@ Phase 3 primary comparison, its power condition, and the Addendum 2 prediction.
 comparison-question finding, promoted to a directional hypothesis and tested
 on 600 fresh questions disjoint from the Phase 3 sample. Those rows are
 confirmatory.
+
+`YES (proposal RQ2)` marks the AUROC analysis. That **quantity** was registered
+in the original project proposal, before any data existed, so it is not a
+post-hoc hypothesis. One qualification is owed: the decision to compute it when
+it was computed came *after* seeing the weaker Spearman result that had been
+substituted for it. That is a milder form of selection than generating a
+hypothesis from the data -- the quantity, the predictor and the comparator were
+all fixed in advance -- but it is not none, and it is recorded here rather than
+left for a reader to notice.
 
 `NO-POST-HOC` means the analysis was chosen **after** seeing the Phase 3 result.
 That covers the entire by-type split, the r-component diagnostics and the
