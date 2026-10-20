@@ -1,0 +1,401 @@
+qid,qtype,r,max_relevance,answer,gold,em,f1,gold_in_context
+5a711cb45542994082a3e59f,comparison,0.507692,0.840078,Liezel Huber,Liezel Huber,1,1.0,1
+5a7129685542994082a3e5fa,bridge,0.505556,0.83024,Vitor Belfort,Vitor Belfort,1,1.0,1
+5a713b325542994082a3e6b5,bridge,0.45,0.83929,Agra,Agra,1,1.0,0
+5a713fb15542994082a3e6f0,comparison,0.45,0.847809,About Time,San Marco,0,0.0,1
+5a7172105542994082a3e837,bridge,0.422222,0.822979,Revolver,Revolver,1,1.0,1
+5a7217f255429971e9dc9260,bridge,0.50303,0.885685,Sir Nicholas Raymond Winterton,Sir Nicholas Raymond Winterton,1,1.0,1
+5a72239a55429971e9dc92cf,bridge,0.485714,0.867194,General John J. Pershing,Major Charles White Whittlesey,0,0.0,0
+5a7268235542992359bc3081,bridge,0.396078,0.86744,131st Bomb Wing,133d Air Refueling Squadron,0,0.0,0
+5a726ba35542997f827839c0,bridge,0.438095,0.862224,Peter B. Ryan,Mark Neary Donohue Jr.,0,0.0,0
+5a7299465542992359bc3131,bridge,0.514815,0.851629,Fiat S.p.A.,Fabbrica Italiana Automobili Torino,0,0.0,1
+5a72a51355429901807daf21,bridge,0.459259,0.848485,James Crosby,Bill Boyd,0,0.0,0
+5a72fc865542991f9a20c5e9,bridge,0.466667,0.884084,after the conclusion of the season,"February 9, 1994",0,0.0,0
+5a7320565542991f9a20c61d,bridge,0.477778,0.76556,Jerry Glanville,Keith Bostic,0,0.0,1
+5a7322a25542991f9a20c634,comparison,0.533333,0.854322,15 Hudson Yards,The Metropolitan Life Insurance Company Tower,0,0.0,1
+5a7323ad5542994cef4bc476,comparison,0.459259,0.779777,Max Green (musician). Maxwell Scott Green,Chantal Claret,0,0.0,1
+5a7326cb5542994cef4bc47f,bridge,0.414286,0.835937,chords,was written by all four members of the band,0,0.0,1
+5a7339c85542991f9a20c6a2,bridge,0.50303,0.822661,County Armagh,"""Orchard County""",0,0.5,0
+5a7345185542992359bc32cb,comparison,0.459259,0.748835,North Africa,Europe,0,0.0,1
+5a738a5955429908901be2f6,bridge,0.429167,0.720278,Jessica Herthel. Jessica Herthel,youngest person to become a national transgender figure,0,0.0,0
+5a74397055429974ef308bbe,bridge,0.513725,0.789284,Gregg Popovich,Bob Hill,0,0.0,1
+5a747a3755429974ef308c09,comparison,0.45,0.700594,"guitarist, singer-songwriter and producer",singer and songwriter,0,0.75,1
+5a75083b5542996c70cfae7e,bridge,0.488889,0.757683,"Merchant Taylors' School, Northwood",Merchant Taylors' School (MTS),0,0.75,1
+5a7509175542993748c897a3,bridge,0.461905,0.741495,Prince Vlad & the Gargoyle Impalers,Saint Motel,0,0.0,0
+5a750d315542996c70cfae84,bridge,0.394444,0.768126,Ronald Joseph Ryan,Ronald Ryan,0,0.8,0
+5a7525405542993748c897ce,bridge,0.485714,0.870915,James Weldon Johnson,James Weldon Johnson,1,1.0,1
+5a752fb75542993748c897df,bridge,0.442424,0.839043,Erreway,Erreway,1,1.0,0
+5a7557d75542992d0ec05f68,bridge,0.422222,0.786398,Roseanne Barr,Laurie Metcalf,0,0.0,0
+5a75e814554299109176e5c7,bridge,0.385185,0.763541,Ken Karls,Gregg Harper,0,0.0,0
+5a7647b85542992d0ec0608a,bridge,0.472727,0.861265,Washington and Essex Streets,Washington Street,0,0.333333,0
+5a76d15e55429966f1a36bfa,bridge,0.405128,0.765498,Lily Bart,Gillian Anderson,0,0.0,0
+5a76f7e855429972597f1404,bridge,0.459259,0.716161,Kadaperi,Madras Export Processing Zone,0,0.0,1
+5a77174f55429966f1a36c4c,bridge,0.351515,0.837589,The Second Sex,Les Temps modernes,0,0.0,0
+5a77322055429972597f1494,bridge,0.5,0.750182,DeskMate,DeskMate,1,1.0,1
+5a7736bc554299373536021b,bridge,0.50303,0.757453,Antonio Lucio Vivaldi,Antonio Lucio Vivaldi,1,1.0,0
+5a773c5c55429966f1a36cbb,bridge,0.472727,0.842796,Preston North End,Preston North End,1,1.0,0
+5a773c7755429972597f14b5,bridge,0.394444,0.917852,Adelaide,Hallett Cove,0,0.0,0
+5a773ec45542994aec3b7245,comparison,0.466667,0.779876,8 October 1985,Simone Bolelli,0,0.0,1
+5a7754d85542993735360234,bridge,0.459259,0.827312,Frank Irving Cobb,Joseph J. Pulitzer,0,0.0,0
+5a775bab5542994aec3b72a8,bridge,0.505556,0.92288,Bujanovac and Preševo,municipalities of Bujanovac and Preševo,0,0.75,1
+5a775bd65542993569682d6b,bridge,0.509524,0.811601,Stephen Hawking,Stephen Hawking,1,1.0,1
+5a776b82554299373536026f,bridge,0.477778,0.861878,Japanese yen,yen,0,0.666667,1
+5a7785af55429949eeb29ec2,comparison,0.422222,0.797621,Paul Verhoeven,Paul Verhoeven,1,1.0,1
+5a778d7855429967ab1051fa,bridge,0.422222,0.849546,"Pushkin, Glinka and Pyotr Ilyich Tchaikovsky",Pyotr Ilyich Tchaikovsky,0,0.666667,0
+5a77984d5542992a6e59df14,bridge,0.45641,0.821523,biographer). Henry Moore (1751–1844) was an English Wesleyan minister and biographer,minister,0,0.166667,1
+5a77a7db5542995d8318124d,comparison,0.45,0.822058,Julia Peterkin,Julia Peterkin,1,1.0,1
+5a77c15f5542997042120b1c,bridge,0.422222,0.850249,Leafcutter John,Leafcutter John,1,1.0,0
+5a77d5e655429967ab1052cc,bridge,0.442424,0.803478,Club,Club,1,1.0,1
+5a77e62b5542992a6e59dfea,bridge,0.4,0.769851,Tennessee,Tennessee,1,1.0,1
+5a78a7025542990784727710,bridge,0.438095,0.801351,Anne Noë,Jean-Marie Pfaff,0,0.0,1
+5a78ce79554299029c4b5ea1,bridge,0.433333,0.846089,Elizabeth II,Queen Mathilde,0,0.0,1
+5a78e9a2554299148911f995,bridge,0.438095,0.793702,Drillers Stadium,Drillers Stadium,1,1.0,1
+5a78f8e555429970f5fffe01,bridge,0.408333,0.84331,springboard,10-metre platform event,0,0.0,0
+5a79cabc5542994f819ef0a1,bridge,0.50303,0.854717,Marco Fu. Derek Currie,Marco Fu,0,0.666667,0
+5a79d8ec5542996c55b2dc7e,bridge,0.496296,0.735728,Brea Mall in Brea,"Brea, California",0,0.333333,0
+5a79eef75542996c55b2dca6,bridge,0.477778,0.90013,Daniel Craig,Daniel Craig,1,1.0,1
+5a7a33205542996a35c1712f,bridge,0.394444,0.739378,The Province of New York,Province of New York,1,1.0,0
+5a7a68d25542996c55b2dd98,bridge,0.442424,0.838657,second cousin once removed,second cousin once removed,1,1.0,1
+5a7ab1e955429931da12c95d,bridge,0.483333,0.811017,University of Hawaiʻi at Mānoa in Honolulu CDP,Honolulu,0,0.222222,1
+5a7b1d3b5542992d025e677a,bridge,0.454902,0.855747,N.P. Dodge Memorial Park,Dodge Memorial Park,0,0.75,0
+5a7b215f55429931da12c9e3,comparison,0.466667,0.802925,"June 29, 1924",Helen Elswyth Thane Ricker Beebe,0,0.0,0
+5a7b413a5542992d025e67c4,bridge,0.45,0.871133,mixed martial arts,martial arts,0,0.8,1
+5a7b48b15542995eb53be8eb,bridge,0.505556,0.778941,Office,Microsoft Office,0,0.666667,1
+5a7b695f5542997c3ec97156,bridge,0.453968,0.76357,Alcator C-Mod,Plasma,0,0.0,0
+5a7b74485542997c3ec97190,bridge,0.342857,0.831715,Jasenovac,the Jasenovac concentration camp,0,0.5,0
+5a7b8f66554299294a54a9f7,bridge,0.533333,0.884812,1938,1894,0,0.0,1
+5a7c67c15542990527d55498,bridge,0.422222,0.809769,Barton,Sir Edmund Barton,0,0.5,0
+5a7c8e7955429935c91b521a,bridge,0.516667,0.894238,Hayley Catherine Rose Vivien Mills,Hayley Catherine Rose Vivien Mills,1,1.0,1
+5a7d41425542997cc2c4743b,bridge,0.422222,0.772614,B-17 Flying Fortress,American Boeing B-17 Flying Fortress,0,0.8,0
+5a7d5c175542991319bc93b1,comparison,0.485714,0.792459,Priscilla Denise Levertov (24 October 1923 – 20 December 1997,Denise Levertov,0,0.363636,1
+5a7dedb55542995f4f402317,bridge,0.444444,0.788546,1837,1837,1,1.0,1
+5a7dff595542997cc2c474eb,bridge,0.485714,0.839425,Julius Nepos,Charles Reed Bishop,0,0.0,1
+5a7e040f5542990b8f503b13,comparison,0.466667,0.818451,"April 12, 1955",Bruce Conner,0,0.0,1
+5a7e910a554299306751357f,bridge,0.477778,0.722768,Crystal Gayle and Gary Morris,Gary Morris,0,0.571429,0
+5a7f38e255429930675136b6,bridge,0.5125,0.84555,Ronkonkoma ( ) is a hamlet and census-designated place (CDP) on Long Island,Long Island,0,0.307692,1
+5a7f46115542994857a766d9,bridge,0.412121,0.857298,Baron Philippe de Rothschild,Rothschild banking dynasty,0,0.285714,1
+5a7f7e3a5542992097ad2f89,bridge,0.511111,0.784617,Akim Tamiroff,Edward Albert Heimberger,0,0.0,1
+5a7f84225542994857a76756,bridge,0.482051,0.855076,Gerald B. and Beverley Tonkens House,Amberley Village,0,0.0,0
+5a7fa97d5542994857a767a9,bridge,0.496296,0.792447,Rick Ross,Rick Ross,1,1.0,1
+5a7faed65542994857a767b6,bridge,0.480702,0.69361,Starachowice,City of Starachowice,0,0.5,0
+5a7fb6625542994857a767cc,bridge,0.45,0.863138,Oscar,BAFTA Awards for Best Actress,0,0.0,0
+5a7fc41455429969796c1b51,bridge,0.405128,0.845777,Khia,2 million,0,0.0,0
+5a800ca555429969796c1bac,bridge,0.509524,0.809561,"Socrates, Napoleon, Malcolm X, and James Baldwin. Socrates. Socrates",Plato,0,0.0,1
+5a80993d5542996402f6a589,bridge,0.533333,0.681495,Vincent Landay,Spike Jonze,0,0.0,1
+5a80a654554299485f598679,bridge,0.366667,0.873054,Alfred Edward Housman,A. E. Housman,0,0.4,0
+5a80afcf554299485f5986b9,bridge,0.45,0.817397,Senator David Boren and Representative David McCurdy,David McCurdy,0,0.444444,1
+5a80b9ae5542992bc0c4a7eb,bridge,0.422222,0.772521,Jennifer Lopez,Shenae Grimes-Beech,0,0.0,0
+5a80b9e85542992bc0c4a7ed,bridge,0.472727,0.846307,hulder,Rå,0,0.0,1
+5a80c01855429938b61421b8,bridge,0.488889,0.861323,Bill Curry,Bill Lewis,0,0.5,0
+5a81a2055542990a1d231e2d,bridge,0.5,0.796477,Odysseus,Odysseus,1,1.0,1
+5a81b2505542995ce29dcc32,bridge,0.498246,0.91671,Riviera Hotel,Riviera,0,0.666667,1
+5a81ca835542990a1d231ebd,bridge,0.442424,0.79552,"Peter, Paul and Mary",Yarrow and Stookey,0,0.285714,0
+5a81d54a55429903bc27b9d4,comparison,0.442424,0.816949,students at Berklee College of Music,no,0,0.0,0
+5a829fab55429954d2e2eb83,comparison,0.533333,0.859843,dark yet farcical cynicism,"John Kingsley ""Joe"" Orton",0,0.0,1
+5a82c51055429966c78a6a8d,bridge,0.394444,0.812408,Madison Square Garden,at Westlake Recording Studios in Los Angeles,0,0.0,0
+5a82f05255429966c78a6aa2,bridge,0.511111,0.801986,West Side Crips,Crips,0,0.5,0
+5a831fc955429954d2e2ec28,bridge,0.342857,0.729064,Sydney,Sydney,1,1.0,0
+5a8333115542993344745feb,bridge,0.433333,0.807039,Lewis and Clark County,Scapegoat Mountain,0,0.0,0
+5a83431d5542993344745ff5,bridge,0.433333,0.775259,Verifone,"San Jose, California",0,0.0,0
+5a838a3d554299123d8c215d,bridge,0.422222,0.862811,A11,5320 km,0,0.0,0
+5a83b01c5542996488c2e489,bridge,0.422222,0.79169,Matías Almeyda,Matías Jesús Almeyda,0,0.8,0
+5a843de75542992ef85e23b4,bridge,0.422222,0.858744,Wynn Palace,Treasure Island,0,0.0,0
+5a8456ef5542990548d0b289,bridge,0.445614,0.808166,West Virginia Mountaineers,West Virginia Mountaineers,1,1.0,0
+5a8463d05542990548d0b2a5,bridge,0.485714,0.806146,Shari Shattuck,Shari Shattuck,1,1.0,1
+5a848a685542997b5ce3feae,bridge,0.422222,0.758284,Robert Sargent Shriver,President John F. Kennedy,0,0.0,1
+5a84a1c85542992a431d1a7c,bridge,0.394444,0.812096,Marjorie McGinnis,Marjorie McGinnis,1,1.0,1
+5a84c01e5542991dd0999dd6,bridge,0.466667,0.842162,Harald Fairhair,934 to 961,0,0.0,1
+5a84d2775542994c784dda5f,bridge,0.390476,0.771482,Na+/K+-ATPase,dementia,0,0.0,0
+5a84d4555542992a431d1aac,bridge,0.461905,0.836074,Oscar Hammerstein Award,Tony Award,0,0.4,0
+5a84e61b5542997b5ce3ff86,bridge,0.444444,0.886359,500th,show's 500th episode,0,0.4,1
+5a85df525542994c784ddb9f,bridge,0.422222,0.831153,Robert Allen Iger,Robert A. Iger,0,0.8,1
+5a85ea095542994775f606a8,bridge,0.42807,0.722864,Animorphs,Animorphs,1,1.0,1
+5a86204d5542994775f60709,bridge,0.45,0.876513,"King's College, Newcastle",Exeter College,0,0.333333,1
+5a862974554299211dda2a95,bridge,0.459259,0.701414,Patrick Henry,John William Henry II,0,0.333333,0
+5a8639545542991e771815c7,comparison,0.381818,0.783663,"Theodoros ""Theo"" Angelopoulos","Theodoros ""Theo"" Angelopoulos",1,1.0,1
+5a864ff7554299211dda2af2,bridge,0.457576,0.877064,Taylor Swift,Taylor Swift,1,1.0,0
+5a865e785542991e7718161b,comparison,0.472727,0.865041,Americas Tower,Americas Tower,1,1.0,1
+5a866fa855429960ec39b6a5,bridge,0.50303,0.776664,Maleficent,"""Sleeping Beauty""",0,0.0,0
+5a86b13f55429960ec39b6c3,bridge,0.480702,0.869546,"Ufa, Russia","Ufa, Russia",1,1.0,1
+5a86e6f65542994775f6077c,bridge,0.333333,0.736876,About 200,About 200,1,1.0,0
+5a86ea445542994775f60780,bridge,0.514815,0.798701,second half of the third season,the second half of the third season,1,1.0,1
+5a87106555429960ec39b71f,bridge,0.477778,0.841562,Rob Reiner,Rob Reiner,1,1.0,1
+5a875154554299211dda2be7,bridge,0.485714,0.768766,Mickey Gilley,Mickey Gilley,1,1.0,1
+5a8765ad5542996e4f3087cf,comparison,0.477778,0.791658,Joseph Santley,Robert Florey,0,0.0,1
+5a876a4a5542993e715abf30,bridge,0.45,0.879696,FHM Australia,FHM,0,0.666667,0
+5a87ab9b5542996e4f3088c2,bridge,0.416667,0.876314,19th,nineteenth,0,0.0,0
+5a881ea055429938390d3ef3,bridge,0.477778,0.911458,Albany School for Educating People of Color,Albany High School,0,0.4,1
+5a88341c5542994846c1ce20,bridge,0.482051,0.718391,30 Minutes or Less,Zombieland,0,0.0,0
+5a8843cd5542994846c1ce75,bridge,0.466667,0.859022,Mwabvi river,Buffalo,0,0.0,1
+5a886c0c55429938390d3f51,bridge,0.412121,0.732048,Twitch Interactive,Amazon.com,0,0.0,1
+5a888c9d5542997e5c09a612,comparison,0.466667,0.731309,Audioslave,Audioslave,1,1.0,1
+5a88abf75542997e5c09a6a1,bridge,0.507692,0.82392,Phoenix,Miami,0,0.0,1
+5a88db445542993b751ca88a,bridge,0.491667,0.83522,Antonio Salieri,Antonio Salieri,1,1.0,1
+5a89bbb05542992e4fca83a3,bridge,0.45,0.771273,Nick Offerman,Nick Offerman,1,1.0,0
+5a89dd4d554299669944a5e3,bridge,0.482051,0.877194,Blue Grass Airport,Blue Grass Airport,1,1.0,1
+5a89f5815542993b751ca9c5,bridge,0.461905,0.722516,Princess Jessica,Princess Jessica,1,1.0,0
+5a8a032f5542993b751ca9e5,bridge,0.466667,0.82847,Gothic Revival,Gothic Revival,1,1.0,1
+5a8a12ae5542992d82986e92,bridge,0.338889,0.720799,Dalcross Castle,Scotland,0,0.0,1
+5a8a39b355429930ff3c0d13,bridge,0.50303,0.83297,Peter Nowalk,Peter Nowalk,1,1.0,0
+5a8a4a4055429930ff3c0d77,bridge,0.533333,0.949475,Jon M. Chu,Anne Fletcher,0,0.0,0
+5a8a502b5542996c9b8d5ea6,bridge,0.488889,0.859924,Dr. Brewster M. Higley,Dr. Brewster M. Higley,1,1.0,1
+5a8a5dd055429970aeb702c7,bridge,0.45,0.780379,Randall Boggs,Randall Boggs,1,1.0,1
+5a8aed1555429970aeb70334,bridge,0.491667,0.802343,URO VAMTAC,URO VAMTAC,1,1.0,0
+5a8aee3d55429950cd6afc01,comparison,0.533333,0.772918,Clianthus,Clianthus,1,1.0,0
+5a8b5c8155429949d91db56d,bridge,0.430769,0.724559,"Kamloops, British Columbia, Canada","Salford, Lancashire",0,0.0,0
+5a8b77705542995d1e6f13aa,bridge,0.477778,0.893769,Sirius XM,Sirius XM Holdings,0,0.8,0
+5a8b7cb95542995d1e6f13bb,bridge,0.433333,0.780161,Kornelyans,Dalton Gang,0,0.0,0
+5a8b84875542995d1e6f13d7,bridge,0.405128,0.815309,Kelley Alice Jakle,Brittany Snow,0,0.0,0
+5a8bbb8c5542995d1e6f142e,bridge,0.438095,0.812697,Pakistani,Pakistan,0,0.0,1
+5a8bc1565542996e8ac88a0c,bridge,0.485714,0.879018,1992,The 2016 United States Senate election,0,0.0,0
+5a8bd9c95542997f31a41de2,bridge,0.533333,0.829558,Patna University,University of Oxford,0,0.4,0
+5a8c06bb5542995e66a47530,bridge,0.47451,0.705103,Rich Girl,"""Rich Girl""",1,1.0,1
+5a8c42d7554299240d9c20f5,bridge,0.4,0.832626,four years,two years,0,0.5,0
+5a8c87aa554299653c1aa0ac,comparison,0.491667,0.762096,"Super Size Me"".",yes,0,0.0,1
+5a8c92dd554299653c1aa0c4,comparison,0.333333,0.804665,Big Pig,Big Pig,1,1.0,0
+5a8ce9ed554299585d9e3764,bridge,0.533333,0.850399,Miranda Leigh Lambert,Miranda Lambert,0,0.8,1
+5a8d0c1b5542994ba4e3dbb3,bridge,0.533333,0.848608,Tamil,Tamil,1,1.0,1
+5a8d6d4e554299441c6b9fdb,bridge,0.445614,0.89713,Legoland California,Legoland Billund,0,0.5,0
+5a8db916554299441c6ba057,bridge,0.442424,0.766559,Hindi,Hindi,1,1.0,1
+5a8de02b554299068b959e13,bridge,0.45,0.819959,ATK,Republic of Ireland national team,0,0.0,1
+5a8e1027554299653c1aa15f,bridge,0.415686,0.872554,2014–15,2009 Big 12 Conference,0,0.0,0
+5a8e341c5542995085b373d6,comparison,0.472727,0.693002,"Kenneth John ""Kenny"" Ortega",no,0,0.0,1
+5a8e942b5542995085b3745c,bridge,0.408333,0.748234,Tokyo Summer Festival,Tomorrowland,0,0.0,0
+5a8eaa74554299068b959e88,bridge,0.485714,0.849436,The Onion. The Onion,The Onion,0,0.666667,1
+5a8ec02e5542995a26add501,bridge,0.516667,0.766934,"Tim and Eric Awesome Show, Great Job!",Check It Out!,0,0.0,1
+5a8edb5c55429917b4a5bde9,bridge,0.45641,0.80085,47,47 years,0,0.666667,1
+5a8ee6915542990e94052bad,bridge,0.417391,0.739087,season 2,third,0,0.0,0
+5a8f186055429918e830d186,bridge,0.50303,0.750568,OSRIC,Old School Reference and Index Compilation,0,0.0,1
+5a8f5b6f554299458435d5e7,bridge,0.50303,0.792514,Appalachian,eastern North America,0,0.0,0
+5a8f608d5542992414482a94,bridge,0.496296,0.840918,publicly available,publicly available,1,1.0,0
+5a8f73455542997ba9cb3269,bridge,0.390476,0.717877,Ohio Wesleyan University,University of Texas at Austin,0,0.25,0
+5a8f9dca55429918e830d295,bridge,0.438095,0.800546,Cane Ashby,"Tyler ""Ty"" Mendoza",0,0.0,0
+5a8fa32255429918e830d299,bridge,0.466667,0.863666,General John J. Pershing,commander of the American Expeditionary Force (AEF) on the Western Front,0,0.0,1
+5a8fbfcd5542997ba9cb3316,bridge,0.496296,0.786954,Zurich,Switzerland,0,0.0,1
+5a8fc3b155429933b8a20454,bridge,0.496296,0.68878,Paleo-Indians,Paleo-Indians,1,1.0,1
+5a9023d355429916514e742f,bridge,0.422222,0.831784,Reich Chancellery,Prince Antoni Radziwiłł,0,0.0,0
+5a90c8165542995651fb51ee,bridge,0.422222,0.798922,Easter Rising of 1916,Easter Rising of 1916,1,1.0,1
+5ab1c2bf5542997061209558,bridge,0.485714,0.914967,University of Missouri,University of Missouri,1,1.0,1
+5ab28156554299449642c8ce,bridge,0.482051,0.738261,American Defenders of New Hampshire,Canadian-American Association of Professional Baseball,0,0.363636,0
+5ab29346554299545a2cf997,bridge,0.459259,0.834271,KXII. KXII,KXII,0,0.666667,0
+5ab29426554299545a2cf99f,bridge,0.498246,0.874456,Isaiah Thomas,Cavaliers,0,0.0,0
+5ab2a308554299340b52553b,bridge,0.438095,0.839259,British,English,0,0.0,0
+5ab2acbc55429929539467d2,bridge,0.496296,0.778351,Laysan. Laysan,Laysan,0,0.666667,1
+5ab2af1655429929539467eb,bridge,0.472727,0.799054,Victoria Peak,552,0,0.0,1
+5ab2c418554299545a2cfa67,bridge,0.513725,0.876921,Hotchkiss M1914 machine gun,Mle 1914 Hotchkiss machine gun,0,0.666667,1
+5ab2d3c5554299295394687a,bridge,0.47451,0.795943,Phillip Noyce,Phillip Noyce,1,1.0,1
+5ab2d65e554299545a2cfabe,bridge,0.461905,0.905394,ISO 3166,UN M.49 standard,0,0.0,0
+5ab2e3a35542991669774124,bridge,0.442424,0.852014,iron boar crest,A simple iron boar crest,0,0.857143,1
+5ab2f6bd554299166977415e,bridge,0.466667,0.877242,Staffordshire,is widely believed to have been the helmet of King Rædwald of East Anglia,0,0.0,0
+5ab30d1155429976abd1bc3d,bridge,0.50303,0.773898,Lynn Minmei,Tim Allen,0,0.0,0
+5ab3357d554299166977419d,bridge,0.45,0.910377,Mumbai,London,0,0.0,1
+5ab3c270554299233954ff9e,bridge,0.505556,0.835329,Spyker F1,Spyker F1,1,1.0,1
+5ab3d69255429969a97a81c9,bridge,0.466667,0.910298,USS Essex,USS Essex,1,1.0,0
+5ab3eb1955429969a97a81f6,bridge,0.45,0.883238,Twelfth Night: Or What You Will,What You Will,0,0.666667,0
+5ab412da5542996a3a969f15,bridge,0.45,0.837099,eight,eight,1,1.0,1
+5ab416a25542996a3a969f28,bridge,0.438095,0.84945,"The Danish West Indies (Danish: ""Dansk Vestindien"" ) or Danish Antilles was a Danish colony in the Caribbean",Caribbean,0,0.133333,1
+5ab4355555429942dd415ee3,bridge,0.494118,0.801532,"Arthur Schnitzler's 1926 novella ""Traumnovelle"" (""Dream Story""),","""Traumnovelle"" (""Dream Story"")",0,0.545455,1
+5ab45a0b5542991779162c7e,bridge,0.408333,0.907103,Wilton Mall at Saratoga,Viaport Rotterdam,0,0.0,1
+5ab46a0f5542990594ba9c1b,bridge,0.5,0.675242,Miami,University of Mississippi,0,0.0,0
+5ab487765542990594ba9c4e,bridge,0.472727,0.881297,Minoan or Mykenaian,Minoan civilization,0,0.4,0
+5ab48af35542996a3a969f92,bridge,0.507692,0.823881,Fennec fox,Fennec fox,1,1.0,1
+5ab520dd5542996a3a96a02c,bridge,0.5,0.772146,New York State. He formerly represented the 62nd District in the New York,New York,0,0.307692,1
+5ab53ad6554299488d4d9917,bridge,0.445614,0.791162,Donald Ashworth,Shep Meyers,0,0.0,1
+5ab553e2554299494045ef81,bridge,0.5,0.874972,David Spade,"""Saturday Night Live""",0,0.0,0
+5ab5820e554299488d4d99c3,bridge,0.470833,0.833999,Palacio de Deportes de la Comunidad de Madrid,"15,000 people",0,0.0,0
+5ab587f85542992aa134a34d,bridge,0.491667,0.744735,their home country,Hookend Recording Studios,0,0.0,1
+5ab5c8c5554299637185c60d,comparison,0.45,0.704792,Soviet,no,0,0.0,1
+5ab5e024554299494045f097,comparison,0.433333,0.741061,Norman Mailer was a 20th-century American author,yes,0,0.0,0
+5ab659e355429954757d324e,bridge,0.422222,0.787111,1967,1887,0,0.0,0
+5ab6bae95542995eadef0086,bridge,0.488889,0.794396,The University of Georgia,The University of Georgia,1,1.0,1
+5ab6c1da554299710c8d1f4c,bridge,0.442424,0.817739,Rovaniemi,"Finland's northernmost province, Lapland",0,0.0,0
+5ab6c47e55429954757d3368,bridge,0.507692,0.82465,University of Oxford,"University of Oxford, England",0,0.857143,1
+5ab6e8e6554299710c8d1faf,bridge,0.45641,0.737619,John Mills and Tom Courtenay,Sir Thomas Daniel Courtenay,0,0.222222,0
+5ab6fcf55542991d32223718,bridge,0.45641,0.77925,Mahakavi Kalidasu,Supergirl,0,0.0,0
+5ab70f79554299110f219aa9,bridge,0.422222,0.814027,DFDS Seaways,Danish,0,0.0,0
+5ab7178f5542991d32223774,bridge,0.45,0.926697,1964,1484,0,0.0,0
+5ab73eaf5542992aa3b8c7ef,bridge,0.45,0.845967,chimpanzee,Chimpanzees,0,0.0,1
+5ab7bbbf55429928e1fe38bf,bridge,0.45,0.787597,The Cottone clan,Kansas City crime family,0,0.0,0
+5ab7f1b65542991d322237d3,bridge,0.459259,0.862827,Miranda,Rudolf Abel,0,0.0,0
+5ab811e95542995dae37ea22,bridge,0.457576,0.834649,Charlie Puth,Wiz Khalifa,0,0.0,0
+5ab82d345542990e739ec854,bridge,0.390476,0.708985,Mickey's Christmas Carol,Mickey's Christmas Carol,1,1.0,0
+5ab82fe155429919ba4e225a,bridge,0.459259,0.841865,Anteo,"PPA, Pattugliatore Polivalente d'Altura",0,0.0,0
+5ab83bd055429919ba4e2279,bridge,0.385185,0.870291,Buskerud,Buskerud,1,1.0,1
+5ab851e35542990e739ec8c3,bridge,0.442424,0.903428,Bangalore University,"Karnataka, India",0,0.0,0
+5ab859a955429934fafe6d7b,bridge,0.414286,0.725754,Phil Spector,Phil Spector,1,1.0,0
+5ab8f53355429916710eb0d1,bridge,0.422222,0.814005,Bill Paxton,Bill Paxton,1,1.0,1
+5ab8ffc655429934fafe6e30,bridge,0.496296,0.83179,2011,June 2003,0,0.0,0
+5ab915ad55429919ba4e239c,bridge,0.379487,0.840087,Cassius Clay,Jimmy Ellis,0,0.0,0
+5ab91dc555429919ba4e23b4,bridge,0.438095,0.866855,lead guitarist,guitarist,0,0.666667,1
+5ab93262554299131ca422b6,bridge,0.45,0.879144,"split 7""",heavy metal band,0,0.0,0
+5ab935c755429934fafe6e74,bridge,0.422222,0.804292,American,American,1,1.0,1
+5ab9405c554299743d22ea7c,bridge,0.485714,0.90049,Richmond,"Annapolis, Maryland",0,0.0,0
+5ab941c2554299743d22ea88,bridge,0.461905,0.785107,C. J. Cherryh,"Carolyn Janice Cherry (born September 1, 1942), better known by the pen name C. J. Cherryh,",0,0.333333,1
+5ab973b35542996be20204fd,bridge,0.461905,0.814904,Gary Condit,USC Marshall School of Business,0,0.0,0
+5ab99a215542996be202056a,bridge,0.459259,0.908386,Fyvie Castle,"Aberdeenshire, Scotland",0,0.0,1
+5ab9debb55429955dce3ed97,bridge,0.477778,0.85993,DI Humphrey Goodman,DI Humphrey Goodman,1,1.0,1
+5ababbe9554299232ef4a38a,bridge,0.472727,0.856116,Rankin/Bass,Margery Williams,0,0.0,0
+5abaca935542996606241610,bridge,0.438095,0.889879,Straight No Chaser,Indiana University,0,0.0,0
+5abaccd1554299660624161b,bridge,0.4,0.781155,American,"McComb, Mississippi",0,0.0,0
+5abb23655542992ccd8e7f25,bridge,0.366667,0.815321,1950s,1858,0,0.0,1
+5abb30755542996cc5e49fd8,bridge,0.45641,0.816399,vice president,President of the United States,0,0.333333,0
+5abb8ebe5542993f40c73b2d,bridge,0.488889,0.780642,"Dancing on Ice"" around the world. Dancing on Ice around the world. Dancing on Ice","""Dancing on Ice"" around the world",0,0.555556,1
+5abbaed855429931dba144aa,bridge,0.496296,0.705247,Black Friday weekend,the fourth Thursday,0,0.0,1
+5abbf698554299114383a0b5,bridge,0.498246,0.772527,English Electric Canberra,English Electric Canberra,1,1.0,1
+5abc41315542993a06baf8bb,bridge,0.496296,0.792467,Julie Taymor,Julie Taymor,1,1.0,1
+5abc7bf5554299114383a129,comparison,0.45641,0.791741,"Monkey Gland. The Monkey Gland is a cocktail of gin, orange juice, grenadine and absinthe",Monkey Gland,0,0.266667,1
+5abce85755429959677d6b3e,bridge,0.466667,0.751446,Franco Dragone,O,0,0.0,0
+5abd001d5542993a06baf9f2,bridge,0.507692,0.896689,National Basketball Development League,National Basketball Development League,1,1.0,1
+5abd04bd5542992ac4f381a9,bridge,0.45,0.746768,2007,2007 Formula One season,0,0.4,0
+5abd0803554299700f9d7979,bridge,0.494118,0.892757,Niccolò Paganini,Niccolò (or Nicolò) Paganini,0,0.666667,1
+5abd2eb255429933744ab750,bridge,0.472727,0.758066,private,private,1,1.0,1
+5abd74c95542993062266ca2,bridge,0.466667,0.855757,Tottenham Hotspur,Premier League club,0,0.0,0
+5abda8d55542992ac4f382e7,bridge,0.466667,0.842501,King Abdullah II of Jordan and the twin sister of Princess Aisha bint Hussein,Princess Aisha bint Hussein,0,0.470588,0
+5abe18e055429976d4830a74,bridge,0.496296,0.807672,Central State University. Music programming is a contemporary/smooth jazz blend with some urban gospel programming. Historically black,black,0,0.111111,1
+5abe364e5542993f32c2a08e,bridge,0.480702,0.843435,Teen Titans Go!,Teen Titans Go!,1,1.0,1
+5abe369055429976d4830a8a,bridge,0.422222,0.761205,Doggerland. Doggerland,Doggerland,0,0.666667,1
+5abe4a365542993f32c2a0dc,bridge,0.513725,0.792999,more than 120,more than 120 countries,0,0.857143,1
+5abe67ae5542991f6610616b,bridge,0.442424,0.846684,Norfolk County,Seacoast Region,0,0.0,1
+5abe80a855429976d4830b43,bridge,0.444444,0.778232,Asiana Airlines,Asiana Town building,0,0.4,0
+5abecdf45542997719eab5d4,bridge,0.422222,0.923528,Davenport and Sebring,Polk,0,0.0,0
+5abece075542997ec76fd36d,bridge,0.4,0.782993,William Shand Kydd,"John Bingham, 7th Earl of Lucan",0,0.0,0
+5abfb3425542990832d3a1c0,bridge,0.496296,0.850206,The Conversation,The Conversation,1,1.0,0
+5abfe2a15542997d6429591c,bridge,0.459259,0.728395,a co-op of grape growers,An agricultural cooperative,0,0.0,1
+5abfea825542994516f45527,bridge,0.533333,0.762835,Mark Griffiths,Peter Chelsom,0,0.0,0
+5ac00de75542996f0d89cb13,bridge,0.485714,0.880252,KlingStubbins,KlingStubbins,1,1.0,1
+5ac02b325542992a796decb9,bridge,0.442424,0.79405,"6 ft , 210 lb",6 ft,0,0.666667,1
+5ac02d345542992a796decc0,bridge,0.477778,0.817751,English,England,0,0.0,1
+5ac056385542997d64295a08,bridge,0.445614,0.852807,Nigel Benn,"""The Ring"" magazine",0,0.0,0
+5ac0805f5542992a796ded29,bridge,0.422222,0.828706,2000,1968,0,0.0,0
+5ac113e2554299294b21909a,bridge,0.466667,0.816315,Bill Grainer,"Wildhorn, Bricusse and Cuden",0,0.0,0
+5ac13e195542994ab5c67cc5,bridge,0.459259,0.840151,Kramer's caddy Stan,Kramer's caddy Stan,1,1.0,1
+5ac14d0c5542991316484ae2,comparison,0.496296,0.753006,Jacques Tourneur,Jacques Tourneur,1,1.0,1
+5ac170af5542994d76dcce20,comparison,0.311111,0.733888,Syd Barrett,"Gregory John ""Greg"" Puciato",0,0.0,0
+5ac173d85542994d76dcce37,bridge,0.533333,0.841546,Bob Dylan. Bob Dylan,Bob Dylan,0,0.666667,1
+5ac175635542994ab5c67d4b,bridge,0.442424,0.832369,David O'Leary,Martin O'Neill,0,0.333333,0
+5ac19bf55542994ab5c67d97,bridge,0.46087,0.896397,Charley Patton,Joe McCoy and Memphis Minnie,0,0.0,1
+5ac1a5b45542991316484b8b,comparison,0.491667,0.836621,Odds are a Canadian alternative rock band,yes,0,0.0,1
+5ac1b1345542994ab5c67dd0,bridge,0.477778,0.801588,1736,1736,1,1.0,1
+5ac1c4e85542994ab5c67e0c,bridge,0.381818,0.802635,"three different covers for the main game, one featuring Anthony Davis",Anthony Davis,0,0.333333,0
+5ac1c73e55429964131be28a,bridge,0.513725,0.872344,Country Thuggin,Country Thuggin,1,1.0,1
+5ac2546a554299636651997b,comparison,0.466667,0.775862,Candlelight Red,Motion City Soundtrack,0,0.0,0
+5ac270025542990b17b15390,bridge,0.459259,0.822668,9,9 venues,0,0.666667,1
+5ac2758b55429963665199c3,bridge,0.472727,0.866195,1926,10 January 1920,0,0.0,0
+5ac286c055429963665199f8,bridge,0.433333,0.69757,Man or Muppet,A Star Is Born,0,0.0,0
+5ac2920555429921a00aafc9,comparison,0.433333,0.85672,"Istanbul, Turkey","Istanbul, Turkey",1,1.0,1
+5ac2ae4155429921a00ab030,bridge,0.496296,0.942226,Pru Goward,Jane Goward,0,0.5,0
+5ac2bcf55542990b17b1546e,bridge,0.509524,0.778672,Guangzhou,"New Delhi, India",0,0.0,0
+5ac2d85e55429921a00ab06b,bridge,0.466667,0.812995,"Stonycreek Township, Pennsylvania2002",Pennsylvania,0,0.0,1
+5ac2f6b8554299677310265f,bridge,0.5125,0.900884,"Kansas City, Missouri",Kansas City,0,0.8,1
+5ac313145542995ef918c0ed,bridge,0.442424,0.809509,Diane Kruger,Benoît Jacquot,0,0.0,0
+5ac31bbd554299741d48a1f9,bridge,0.45,0.866983,The Schemer,Scarface,0,0.0,0
+5ac371aa5542995ef918c191,bridge,0.47451,0.895156,Third Camp Socialism and Yugoslav Workers' self-management,self-directed work processes,0,0.166667,0
+5ac39bd8554299657fa290fe,comparison,0.507692,0.841872,"11 to 13 species of ""Rhexia"" have been recognized depending on different taxonomic treatments",yes,0,0.0,1
+5ac3a47f554299391541386d,bridge,0.477778,0.911002,Payneham,College Park,0,0.0,0
+5ac3a8525542993915413895,bridge,0.470833,0.86209,off-balance-sheet special purpose entities,independent ghost-entities,0,0.222222,1
+5ac3c0495542995ef918c215,bridge,0.444444,0.863557,Winchester,Winchester,1,1.0,0
+5ac3d7f8554299076e296cb0,bridge,0.433333,0.90715,Delphi Lawrence,Delphi Lawrence,1,1.0,0
+5ac3dfb15542995c82c4ac71,bridge,0.422222,0.83922,Atlas ICBM,rocket,0,0.0,1
+5ac4920d5542996feb3fe8d3,bridge,0.461905,0.800679,1967,"born October 25, 1931",0,0.0,0
+5ac49a1c5542996feb3fe905,bridge,0.454902,0.732267,Chuck Noll,Chuck Noll,1,1.0,0
+5ac4d717554299076e296e0e,bridge,0.50303,0.704205,Larchmont,Harlem,0,0.0,0
+5ac4e03f5542995c82c4ad75,bridge,0.494118,0.856411,"Sudeep, Bhavana Menon and Priyamani",Kim Yoon-seok and Ha Jung-woo,0,0.166667,0
+5ac4e593554299076e296e37,bridge,0.485714,0.806832,Gibson acoustic,rhythm guitar,0,0.0,1
+5ac4f2e755429924173fb503,bridge,0.438095,0.816963,Battle of Yiwu,Battle of Prome,0,0.666667,0
+5ac4f33355429924173fb507,bridge,0.461905,0.868536,"Newport, Rhode Island",Ochre Point Avenue,0,0.0,0
+5ac507725542994611c8b32a,bridge,0.485714,0.797978,1963,18 November,0,0.0,0
+5ac510255542994611c8b353,bridge,0.509524,0.882489,A55,A55,1,1.0,1
+5ac524e55542994611c8b3d0,bridge,0.491667,0.838297,Final Fantasy XII,Final Fantasy XII,1,1.0,1
+5ac55c135542993e66e82345,bridge,0.533333,0.862297,Bergen,Hordaland,0,0.0,0
+5adbd70c55429947ff173843,bridge,0.366667,0.824326,Truman Capote,Personal History,0,0.0,0
+5adbe1a7554299438c868cc3,bridge,0.445614,0.758824,"Lowe's Companies, Inc.",Lowe's,0,0.666667,0
+5adbfaa655429947ff173888,bridge,0.466667,0.859186,The Carlyle Group,"corporate private equity, real assets, global market strategies, and investment solutions.",0,0.0,0
+5adc1af75542994650320c75,bridge,0.45641,0.838026,1998,1998,1,1.0,1
+5adc2e3d554299438c868d6b,bridge,0.45641,0.91474,Monterrey,28 June 1945,0,0.0,0
+5adc3a7055429947ff173913,bridge,0.412121,0.768542,French,French,1,1.0,1
+5adc872b5542994d58a2f62f,comparison,0.442424,0.77134,"film director, film producer, television director, and television producer","director, producer",0,0.363636,1
+5adccd795542990d50227d2c,bridge,0.472727,0.8159,Rabat,Beijing,0,0.0,1
+5adcf83855429947343537e1,bridge,0.461905,0.808287,ExCeL Exhibition Centre,ExCeL Exhibition Centre,1,1.0,1
+5add1eed5542992ae4cec485,comparison,0.5,0.826047,1983 to 2016,Spirit of the West,0,0.0,1
+5add47bf5542992200553a7f,comparison,0.438095,0.719748,American,yes,0,0.0,1
+5add559e5542992ae4cec511,bridge,0.5,0.839084,Apple Lisa,Apple Lisa,1,1.0,1
+5add647a5542995b365fab26,comparison,0.485714,0.785615,"""A. onopteris"" is diploid",genus,0,0.0,1
+5add65355542995b365fab27,bridge,0.433333,0.728454,Bill Cosby,stand-up,0,0.0,1
+5adddf5d5542997dc7907078,bridge,0.442424,0.837824,MTV,ESPN,0,0.0,1
+5ade15ae5542990dbb2f7f4c,bridge,0.477778,0.889818,"February 2, 2012",October,0,0.0,0
+5ade2bce5542997c77aded96,comparison,0.50303,0.850767,Frank Borzage,Frank Borzage,1,1.0,1
+5ade8802554299728e26c72d,bridge,0.429167,0.787135,Divers Alert Network/ Rolex Diver of the year,Rolex,0,0.25,0
+5adebc51554299728e26c799,bridge,0.430769,0.828317,Bruce Springsteen Band,E Street Band,0,0.333333,1
+5adf21bc5542993344016bf4,bridge,0.45,0.793372,SiM,Savin Yeatman-Eiffel,0,0.0,0
+5adf39d45542992d7e9f92e5,comparison,0.379487,0.870302,Walt Disney,Disney,0,0.666667,0
+5adf3a4f5542992d7e9f92ec,comparison,0.438095,0.797693,King Diamond,King Diamond,1,1.0,1
+5adf53dc5542995534e8c791,comparison,0.385185,0.711753,Elmer Clifton,Ridley Scott,0,0.0,1
+5adf62d05542992d7e9f932d,bridge,0.5,0.646857,Miss You Much,"""Walk Like an Egyptian""",0,0.0,0
+5adf73a45542992d7e9f9378,bridge,0.430769,0.831722,King Edward II,King Edward II,1,1.0,0
+5adf744d5542992d7e9f937e,bridge,0.477778,0.804869,The Kingkiller Chronicle,The Kingkiller Chronicle series,0,0.8,0
+5adf82945542993344016ca4,comparison,0.385185,0.783509,director,film director,0,0.666667,1
+5adfc8f45542992d7e9f93d0,bridge,0.5,0.819885,Elbow,Elbow,1,1.0,1
+5adfc97255429906c02daa41,bridge,0.463158,0.872666,"League Two, the fourth",second,0,0.0,0
+5ae0111e55429906c02daabc,bridge,0.442424,0.836106,Oracle,Oracle Corporation,0,0.666667,0
+5ae0432a55429924de1b7081,comparison,0.366667,0.809194,Canadian,yes,0,0.0,0
+5ae04a2755429924de1b7091,comparison,0.505556,0.819323,"Columbia University (Columbia; officially Columbia University in the City of New York), established in 1754, is a private",no,0,0.0,1
+5ae056c755429945ae959319,bridge,0.466667,0.779375,Gurinder Chadha,Nick Cassavetes,0,0.0,0
+5ae063085542993d6555eb37,bridge,0.472727,0.79811,sixth,sixth season,0,0.666667,1
+5ae07b0155429945ae95935d,comparison,0.408333,0.850692,Paul Thomas Mann,Paul Thomas Mann,1,1.0,0
+5ae083b75542993d6555eb85,bridge,0.477778,0.859167,Jiří Mádl. Jiří Mádl,Jean Acker,0,0.0,0
+5ae0968955429924de1b7105,bridge,0.533333,0.841997,1968,1960s and early 1970s,0,0.0,1
+5ae0a09a5542993d6555ebc9,comparison,0.381818,0.769994,The Devil and Kate,Eugene Onegin,0,0.0,1
+5ae0b8bb55429924de1b7145,comparison,0.422222,0.794982,Slash,Myles Kennedy,0,0.0,0
+5ae0c1be5542993d6555ec42,bridge,0.430769,0.659334,Directing Award: Documentary,Academy Award for Best Art Direction,0,0.222222,0
+5ae0ead25542990adbacf6c8,bridge,0.438095,0.738706,Jersey barriers,Jersey barrier,0,0.5,1
+5ae0f4645542997b2ef7d0aa,bridge,0.377778,0.80953,Ethereal wave,Ethereal,0,0.666667,0
+5ae12f105542997b2ef7d11e,bridge,0.422222,0.80211,Love Thy Neighbor,Three's Company,0,0.0,0
+5ae1599155429901ffe4ae7b,comparison,0.482051,0.800433,"Austrian actor, screenwriter, film director, film producer and singer","actor, screenwriter, film director, film producer",0,0.8,1
+5ae17f1e5542990adbacf7a6,bridge,0.459259,0.905225,Entre Ríos,Mesopotamia,0,0.0,0
+5ae180d855429901ffe4aecc,bridge,0.422222,0.820078,1992,1964,0,0.0,0
+5ae1e9fd5542997f29b3c1a1,bridge,0.472727,0.895151,John Francis Kelly,John Francis Kelly,1,1.0,1
+5ae201465542997f29b3c1f7,comparison,0.477778,0.831258,Rogers v. Okin,South Dakota v. Dole,0,0.285714,1
+5ae21ef35542994d89d5b35d,bridge,0.422222,0.835887,Georgetown,Washington Huskies,0,0.0,0
+5ae250b45542996483e64977,bridge,0.422222,0.800519,Speaker of the House,former Speaker of the U.S. House of Representatives,0,0.545455,0
+5ae27df25542992decbdcd2a,comparison,0.496296,0.770017,"Connie May Fowler (born January 3, 1960 to parents of multi-cultural backgrounds) is an American novelist, essayist, memoirist",no,0,0.0,1
+5ae31ee75542992decbdcdde,bridge,0.511111,0.861572,Tomorrowland,Tomorrowland,1,1.0,1
+5ae325bd5542991a06ce9936,bridge,0.445614,0.943837,Marine Corps Base Hawaii,Marine Corps Air Station Kaneohe Bay,0,0.4,0
+5ae3263455429928c4239634,bridge,0.515789,0.849253,Mick Mulvaney,2011,0,0.0,1
+5ae3776e5542992e3233c40c,comparison,0.477778,0.812628,Canadian alternative rock band,no,0,0.0,0
+5ae389fc5542992f92d8230f,bridge,0.533333,0.868847,Realty Bites,ninth,0,0.0,0
+5ae39e9c5542990afbd1e195,bridge,0.461905,0.836912,The Captain Matchbox Whoopee Band,The Captain Matchbox Whoopee Band,1,1.0,1
+5ae3d4345542992f92d82387,bridge,0.463158,0.741155,"Frankie Bridge, Una Healy, Rochelle Humes, Mollie King and Vanessa White",Mollie Elizabeth King,0,0.285714,0
+5ae3dfb05542992e3233c490,bridge,0.466667,0.780213,Dominique Wilkins,Jacques Dominique Wilkins,0,0.8,0
+5ae471fa55429970de88d965,bridge,0.511111,0.835526,Centre-du-Québec area,Centre-du-Québec,0,0.857143,1
+5ae479745542996836b02cb1,bridge,0.442424,0.723268,Hard Sell,Sex Drive,0,0.0,0
+5ae47df15542996836b02cba,bridge,0.45,0.792612,Blade II,"Guillermo del Toro,",0,0.0,0
+5ae49bb755429970de88d9d7,bridge,0.507692,0.883494,Al-Masjid an-Nabawi,Al-Masjid an-Nabawī,0,0.666667,1
+5ae4a91d5542995ad6573e09,bridge,0.459259,0.835506,Black Panther Party,black nationalism,0,0.4,1
+5ae4ad375542995dadf243a4,bridge,0.482051,0.775001,Kazunori Yamauchi,Sony Studio Liverpool,0,0.0,0
+5ae4bb1255429913cc2044e7,comparison,0.485714,0.861362,about one million,yes,0,0.0,1
+5ae4bc7955429913cc2044e9,bridge,0.45641,0.759281,1948 Summer Olympics,the 2016 World Indoor Championships,0,0.0,0
+5ae4c96355429913cc204506,bridge,0.477778,0.816086,26,400 members,0,0.0,0
+5ae4d3a55542990ba0bbb164,bridge,0.325,0.802846,Hopi,Dewey Lake Monster,0,0.0,0
+5ae4e29855429908b63264a9,bridge,0.482051,0.843563,Dorados de Sinaloa,city of Culiacán,0,0.0,1
+5ae532f85542990ba0bbb20a,bridge,0.435294,0.834163,Edwin Graham Perkin,Man Haron,0,0.0,0
+5ae5366e5542990ba0bbb22b,bridge,0.505556,0.855173,Anglo-Saxon Chronicle,Anglo-Saxon Chronicle,1,1.0,1
+5ae53c9655429960a22e0290,bridge,0.353846,0.879703,boys,between 11 or 13 and 18,0,0.0,0
+5ae53de455429908b6326599,bridge,0.485714,0.88205,Brodhead Creek,Delaware River,0,0.0,0
+5ae5bcbd55429960a22e0324,bridge,0.533333,0.879557,1903,in 1902,0,0.0,0
+5ae5be475542990ba0bbb2c6,bridge,0.442424,0.853874,The Austro-Hungarian Army,The Austro-Hungarian Army,1,1.0,0
+5ae5e0a6554299546bf82fa9,bridge,0.430769,0.838102,1922,1922,1,1.0,0
+5ae608f2554299546bf83026,bridge,0.533333,0.858066,The Appalachian Mountains,The Appalachian Mountains,1,1.0,1
+5ae634355542995703ce8b41,bridge,0.507692,0.82657,"September 29, 1961","August 2, 1948",0,0.0,0
+5ae64ba755429929b0807b25,bridge,0.442424,0.844875,Binghamton,Albany Great Danes baseball team,0,0.0,0
+5ae66b055542995703ce8b61,bridge,0.422222,0.813429,Ray Cameron (comedian). Ray Cameron,Canadian comedian,0,0.285714,1
+5ae69cfe55429908198fa65f,bridge,0.5,0.866844,Alinta Energy,Chow Tai Fook Enterprises,0,0.0,0
+5ae731ae5542991bbc9761c1,bridge,0.477778,0.764884,Warrington,Halliwell Jones Stadium,0,0.0,0
+5ae76d185542997ec2727641,bridge,0.366667,0.764044,Griese,jewelry designer,0,0.0,0
+5ae791245542997b22f6a7a3,bridge,0.491667,0.864341,Ritu Nanda,life insurance,0,0.0,1
+5ae7ac495542993210983eee,bridge,0.381818,0.818595,What Ever Happened to Baby Jane,What Ever Happened to Baby Jane?,1,1.0,0
+5ae7db435542993210983f9a,bridge,0.488889,0.859894,27 March 1958,23 July 1989,0,0.0,0
+5ae7eb43554299540e5a5695,bridge,0.461905,0.840902,Texas's 27th,Texas's 27th congressional district,0,0.75,0
+5ae7eefd554299540e5a56b6,bridge,0.422222,0.861553,Leonard Cohen and Leon Uris,Leon Marcus Uris,0,0.5,0
+5ae8164d5542994a481bbeb6,bridge,0.454902,0.828033,"July 11, 2014","March 19, 2017",0,0.0,0
+5ae8167b55429952e35eaa06,bridge,0.485714,0.740887,Battle of the Rosebud,Battle of the Rosebud,1,1.0,1
+5ae849cc5542997ec2727798,bridge,0.507692,0.858584,"Wakefield, New Hampshire, and Acton, Maine","Minnesota to the west, and Wisconsin and the Upper Peninsula of Michigan to the south",0,0.111111,0

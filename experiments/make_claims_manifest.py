@@ -564,6 +564,98 @@ def main() -> None:
             "descriptive; comparison arm n=49 and noisy, sign was what was "
             "registered", n2, "experiments/analyse_h2_rv2.py", H2L)
 
+    # ---------------- Addendum 6 -------------------------------------
+    A6 = "YES (Addendum 6)"
+    A6C = "YES (Addendum 6, planned-conditional)"
+    h3p = REPO / "results" / "hotpot_gate_h3.csv"
+    pqp = REPO / "results" / "h3_paired_perquestion.csv"
+    if h3p.exists():
+        import importlib.util as _i2
+        _s2 = _i2.spec_from_file_location(
+            "_rq2b", str(REPO / "experiments" / "analyse_rq2_auroc.py"))
+        _m2 = _i2.module_from_spec(_s2)
+        _s2.loader.exec_module(_m2)
+
+        h3 = list(csv.DictReader(open(h3p, encoding="utf-8")))
+        b3 = defaultdict(dict)
+        for r in h3:
+            b3[r["condition"]][r["qid"]] = r
+        q3 = sorted(b3[BASE])
+        n3 = len(q3)
+        y_em = [int(b3[BASE][q]["em"]) for q in q3]
+        y_gic = [int(b3[BASE][q]["gold_in_context"]) for q in q3]
+        r_s = [float(b3[BASE][q]["r"]) for q in q3]
+        a_em, se_em, lo_em, hi_em, _, _ = _m2.auc_ci(r_s, y_em)
+        a_g, _seg, lo_g, hi_g, _, _ = _m2.auc_ci(r_s, y_gic)
+
+        row("A6",
+            "PRE-REGISTERED PRIMARY (Addendum 6): under HARD retrieval, AUROC "
+            "of legacy r for ANSWER CORRECTNESS is above 0.5 -- POSITIVE, the "
+            "CI excludes 0.5.",
+            f"AUROC {a_em:.4f}, SE {se_em:.4f}, 95% CI [{lo_em:.4f}, {hi_em:.4f}]; "
+            f"{sum(y_em)} positives of {n3}; references under easy retrieval "
+            f"0.5483 (Phase 3) and 0.4689 (H1), both legacy r on three passages",
+            "AUROC with DeLong CI, two-sided; CI excludes 0.5", n3,
+            "experiments/analyse_h3_hard_retrieval.py", A6)
+        row("A6-gold",
+            "PRE-REGISTERED SECONDARY (Addendum 6): legacy r predicts retrieval "
+            "success better under hard retrieval, and beats the retriever's own "
+            "score decisively.",
+            f"AUROC {a_g:.4f}, 95% CI [{lo_g:.4f}, {hi_g:.4f}] against the "
+            f"0.5958 reference; max_relevance 0.5624; DeLong +0.1570",
+            "DeLong vs max_relevance: z = 4.698, p = 0.0000", n3,
+            "experiments/analyse_h3_hard_retrieval.py", A6)
+        row("A6-delong-em",
+            "PRE-REGISTERED SECONDARY (Addendum 6): on answer correctness legacy "
+            "r beats chance but NOT the retriever's own score; r_v2 does.",
+            "legacy r 0.6032 vs max_relevance 0.5401, +0.0631; "
+            "r_v2 0.6052 vs max_relevance, +0.0651",
+            "DeLong: legacy r z = 1.722 p = 0.0851 (ns); r_v2 z = 2.249 "
+            "p = 0.0245 (significant)", n3,
+            "experiments/analyse_h3_hard_retrieval.py", A6)
+
+        em3 = {c: statistics.mean(int(b3[c][q]["em"]) for q in q3) for c in b3}
+        ok3 = {c: [int(b3[c][q]["em"]) == 1 for q in q3] for c in b3}
+        bb = sum(1 for x, y in zip(ok3["c_i_gate"], ok3["b_scalar_max_enc"])
+                 if x and not y)
+        cc = sum(1 for x, y in zip(ok3["c_i_gate"], ok3["b_scalar_max_enc"])
+                 if y and not x)
+        mm = bb + cc
+        pp = (min(1.0, 2 * sum(math.comb(mm, i)
+                               for i in range(min(bb, cc) + 1)) / 2 ** mm)
+              if mm else 1.0)
+        row("A6-gate",
+            "PRE-REGISTERED SECONDARY (Addendum 6): the I-gate LEADS max(e,n,c) "
+            "for the first time, but not significantly.",
+            f"I-gate EM {em3['c_i_gate']:.4f} vs max(e,n,c) "
+            f"{em3['b_scalar_max_enc']:.4f} (difference "
+            f"{em3['c_i_gate'] - em3['b_scalar_max_enc']:+.4f}); fixed k=3 "
+            f"{em3[BASE]:.4f}; rates matched at 0.8250",
+            f"exact McNemar b={bb} c={cc} p={pp:.4f} -- not significant", n3,
+            "experiments/analyse_h3_hard_retrieval.py", A6)
+
+        if pqp.exists():
+            pq = {r["qid"]: r for r in csv.DictReader(open(pqp, encoding="utf-8"))}
+            shared = [q for q in q3 if q in pq]
+            y_pq = [int(pq[q]["em"]) for q in shared]
+            r_pq = [float(pq[q]["r"]) for q in shared]
+            a_pq, _s, lo_pq, hi_pq, _, _ = _m2.auc_ci(r_pq, y_pq)
+            flips = sum(1 for q in shared
+                        if int(pq[q]["em"]) != int(b3[BASE][q]["em"]))
+            row("A6-paired",
+                "PLANNED-CONDITIONAL SECONDARY (Addendum 6): paired on the same "
+                "400 questions, r is predictive under hard retrieval and NOT "
+                "under easy retrieval; the improvement itself is directional "
+                "only.",
+                f"hard {a_em:.4f} [{lo_em:.4f}, {hi_em:.4f}] vs easy "
+                f"{a_pq:.4f} [{lo_pq:.4f}, {hi_pq:.4f}]; raw difference "
+                f"{a_em - a_pq:+.4f}; {flips}/{len(shared)} questions change em "
+                "between settings and are excluded from the DeLong test, which "
+                "needs one shared label",
+                "DeLong on the 367 label-agreeing questions: +0.0382, "
+                "z = 1.725, p = 0.0844 (not significant)", len(shared),
+                "experiments/analyse_h3_paired.py", A6C)
+
     # ---------------- emit --------------------------------------------
     hdr = ("| id | claim (one sentence) | key figures | test & p | n | "
            "regenerating script | pre-registered? |")
@@ -604,6 +696,13 @@ left for a reader to notice.
 
 `YES (Addendum 5)` marks the third registration: the `r_v2` repair, its two
 voiding manipulation checks, and H2. Registered before the sample was drawn.
+
+`YES (Addendum 6)` marks the hard-retrieval experiment: the pooled-index
+primary and its secondaries, registered before the sample was drawn.
+`YES (Addendum 6, planned-conditional)` marks the paired comparison, whose
+run-condition was fixed and committed while the run was still in flight and
+before the primary was read -- verifiable from the commit time against the
+run log.
 
 `NO-POST-HOC` means the analysis was chosen **after** seeing the Phase 3 result.
 That covers the entire by-type split, the r-component diagnostics and the
