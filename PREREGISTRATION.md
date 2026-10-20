@@ -1049,3 +1049,39 @@ AUROC of legacy `r` for `em` failing to exceed 0.5, or its 95% CI including 0.5.
 That would mean making retrieval the binding constraint does **not** make `r`
 predictive of answer correctness, and 7.7.4's diagnosis would need replacing
 rather than extending.
+
+### Addendum 6, conditional secondary — the paired comparison
+
+**Specified 20 October 2026, 21:48 IST, while the run was still in flight and
+BEFORE the primary was read.** At the time of writing,
+`results/hotpot_gate_h3.csv` did not yet exist (the run was at question 125 of
+400) and no accuracy, AUROC or test statistic from this experiment had been
+computed, printed or seen. That ordering is the point of recording it here.
+
+**Condition for running it, fixed now:** this analysis runs **only if the
+registered primary is POSITIVE**, i.e. the AUROC of legacy `r` for `em` is above
+0.5 *and* its 95% CI excludes 0.5. **If the primary is null or reversed, this is
+not run** — a paired follow-up to a null primary would be a search for a
+difference the primary did not find.
+
+**Why it is needed.** The primary's reference values (0.5483 from Phase 3,
+n=400; 0.4689 from H1, n=600) come from **different samples** as well as a
+different retrieval setting, so comparing against them confounds the retrieval
+change with sample variation. The fix is to make the comparison **paired**.
+
+**Design.** Re-run the **same 400 qids** (seed 20261021) under **per-question
+retrieval** — the 10 paragraphs HotpotQA supplies, k=3 — with the **reader
+only**: no NLI, no gate conditions, no expansion. Record legacy `r` and `em` per
+question. Then report:
+
+- AUROC of legacy `r` for `em` on those 400 questions under **both** settings;
+- a **DeLong test** for the two correlated ROC curves **on the same cases**.
+
+Same questions, same retriever, same reader, same `r` formula, same base depth.
+**One thing changed**: whether retrieval draws from the pooled 19,294-passage
+index or from the question's own 10 paragraphs.
+
+**Reported whichever way it comes out**, and marked in `results/claims.md` as a
+**planned-conditional secondary of Addendum 6**, carrying the condition and the
+fact that it was specified before the primary was read.
+
