@@ -934,3 +934,118 @@ foreseen risk rather than discovered afterwards.
 The I-gate failing to exceed `max_enc` on pooled exact match, or the direction
 reversing. A **void** outcome — either manipulation check failing — is reported
 as void and is **not** evidence either way about the decomposition.
+
+---
+
+## Addendum 6 — does `r` predict answer correctness once retrieval binds?
+
+**Registered 20 October 2026, 21:25 IST, BEFORE the sample was drawn and before
+any measurement on it. Appended, not edited.**
+
+### Motivation
+
+Report 7.7.4 concludes that the decomposition fails because **`r` predicts
+retrieval adequacy while answer correctness is decoupled from it**: expansion
+put gold in context on **70–82%** of recoverable misses while EM on those
+questions reached only **0.24–0.27**. Retrieval was not the binding constraint
+in this pipeline.
+
+That is falsifiable. **Make retrieval the binding constraint and `r` should
+begin to predict answer correctness.**
+
+### The registered selection rule is AMENDED, before any accuracy exists
+
+Stage 1a swept the pooled-index size, building one dense index over the
+paragraphs of N questions and retrieving from it instead of the 10 supplied per
+question (`experiments/sweep_pool_size.py`, superset seed 20261020):
+
+| N | pool size | Recall@3 | Recall@10 | ratio | original rule met |
+|---:|---:|---:|---:|---:|---|
+| 250 | 2,488 | 0.6600 | 0.8400 | 0.786 | no |
+| 500 | 4,946 | 0.6690 | 0.8230 | 0.813 | no |
+| 1000 | 9,787 | 0.6375 | 0.7940 | 0.803 | no |
+| **2000** | **19,294** | **0.6100** | **0.7592** | **0.803** | no |
+
+**The registered proxy `Recall@3 ≤ 0.6 · Recall@10` is unsatisfiable at any pool
+size.** `Recall@3 / Recall@10` measures the **retriever's ranking quality**, not
+whether retrieval binds: the ratio moved only **0.786 → 0.803** across an **8×**
+change in N, because pooling degrades all depths proportionally. **The proxy was
+wrong, not the pool.**
+
+It is replaced by a direct criterion. **N is set to the LARGEST swept value,
+2000 (19,294 passages)**, giving **Recall@10 = 0.7592** and
+**Recall@3 = 0.6100**. Retrieval then binds most tightly of any configuration
+measured: **24% of questions have gold unreachable at maximum depth**, against
+**0%** in the distractor setting, where Recall@10 was 1.0 by construction. The
+endpoint is taken **deliberately**, so that no N could have been chosen to suit
+an outcome.
+
+**This amendment follows a retrieval-only sweep that read no accuracy, no label
+beyond the published gold supporting facts, and no gate decision. It is recorded
+before the run.**
+
+**Why base depth stays at k=3.** `k=1` satisfies the *original* rule at every N
+(ratio 0.476–0.518). It is rejected anyway: at one passage `support_count` and
+`diversity` both pin to 0.1, legacy `r` collapses to `coverage/3 + 0.0667`, and
+`coverage` becomes a one-paragraph sample. The primary compares against AUROC
+values computed on **three** passages, so changing base depth would destroy the
+very comparison that is the point of the experiment.
+
+### PRIMARY — two-sided, registered
+
+> Under hard retrieval, **AUROC of LEGACY `r` for ANSWER CORRECTNESS** (`em` at
+> base depth) is **above 0.5**.
+
+Reported with a **95% CI** and whether the CI **excludes 0.5**. Reference values
+under easy retrieval, both **legacy `r` on three passages**:
+
+| sample | AUROC of legacy `r` for `em` | 95% CI |
+|---|---:|---|
+| Phase 3, n=400 | 0.5483 | [0.4840, 0.6127] |
+| H1, n=600 | 0.4689 | [0.4073, 0.5305] |
+
+**LEGACY `r`, not `r_v2`.** The references are legacy-`r` figures and the
+comparison must be like-for-like. `r_v2`'s AUROC is computed alongside as a free
+secondary and is labelled explicitly as **NOT comparable** to those references.
+
+### SECONDARY
+
+- **AUROC of legacy `r` for retrieval success** (`gold_in_context` at base
+  depth), to confirm it still works there. Reference: **0.5958**.
+- **DeLong against `max_relevance`** for **both** labels. The embedder is loaded
+  anyway, so this closes the gap Addendum 4's analysis left open, where
+  `max_relevance` was unavailable for the H1 sample.
+- **The five-condition gate comparison**: `a_fixed_k` plus the four gated
+  conditions, exact McNemar, **I-gate vs `max(e,n,c)`**, as in Phase 3.
+
+### Sample
+
+- **400 questions, stratified**, **disjoint from the Phase 3 400, the H1 600 and
+  the H2 400**. Asserted against all three CSVs, aborting on any overlap.
+  Availability confirmed before registration by parsing only: **1634** of the
+  swept 2000-question pool are disjoint from all three (1430 bridge, 204
+  comparison).
+- **Seed: `20261021`** — distinct from 20261019 (Phase 3), 20261119 (H1),
+  20261219 (H2) and 20261020 (the sweep superset).
+- Retrieval is from the **pooled 19,294-passage index**, never the 10 supplied
+  paragraphs. **Asserted in code.** The queried 400 are a disjoint subset of the
+  2000 whose paragraphs form that index, so the measured recalls above apply
+  unchanged.
+- **Ladder k=3 → 10. Legacy `r`. Everything else unchanged** from Phase 3.
+
+### Reporting rule — binding
+
+- Reported whether the primary is **positive, null or reversed**.
+- **No interim analysis**: the `--no-analysis` path is used, so no accuracy is
+  computable during the run.
+- **Truncation by wall-clock ONLY**, never by inspecting results; analysed once
+  on whatever completed; **realised n reported**. **If the run has not finished
+  by 23:30 IST it is truncated.**
+- No threshold, weight, lambda, target or floor adjusted at any point.
+
+### What would falsify the prediction
+
+AUROC of legacy `r` for `em` failing to exceed 0.5, or its 95% CI including 0.5.
+That would mean making retrieval the binding constraint does **not** make `r`
+predictive of answer correctness, and 7.7.4's diagnosis would need replacing
+rather than extending.
