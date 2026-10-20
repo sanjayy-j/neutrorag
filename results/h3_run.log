@@ -1,0 +1,64 @@
+==============================================================================
+PHASE 3 / RQ3 -- I-gate vs scalar-gate at equal expansion budget
+==============================================================================
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+excluding  :   400 qids from results/hotpot_gate.csv
+excluding  :   600 qids from results/hotpot_gate_h1.csv
+excluding  :   400 qids from results/hotpot_gate_h2.csv
+excluding  : 1400 distinct qids in total
+pooled idx : building over 19294 distinct passages from 2000 questions (seed 20261020) ...
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 10705.59it/s]
+pooled idx : ready, 19294 passages
+pool       : 1634 of 2000 after qtype=None and exclusion
+disjoint   : CONFIRMED, 0 of 400 sampled qids appear in any of [results/hotpot_gate.csv,results/hotpot_gate_h1.csv,results/hotpot_gate_h2.csv]
+sample     : 400  seed=20261021  {'bridge': 350, 'comparison': 50}
+commit     : ac703e7
+Loading weights:   0%|          | 0/202 [00:00<?, ?it/s]Loading weights: 100%|##########| 202/202 [00:00<00:00, 11147.87it/s]
+sufficiency: legacy r
+ladder     : k=3 -> [10]
+
+pass 1/2: scoring 400 questions at k=3 ...
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|##########| 199/199 [00:00<00:00, 11347.52it/s]
+pooled idx : ASSERT -- retriever holds 19294 documents (must be >> 10)
+  25/400  (250s)
+  50/400  (340s)
+  75/400  (425s)
+  100/400  (509s)
+  125/400  (598s)
+  150/400  (679s)
+  175/400  (756s)
+  200/400  (845s)
+  225/400  (947s)
+  250/400  (1034s)
+  275/400  (1108s)
+  300/400  (1199s)
+  325/400  (1287s)
+  350/400  (1363s)
+  375/400  (1455s)
+  400/400  (1533s)
+
+pooled idx : 377 of 1200 base-depth passages came from OTHER questions (31.4%) -- confirms retrieval is pooled, not per-question
+
+recoverable-miss subset : 281/400 (70.2%)
+top-3 already sufficient : 119/400 (29.8%)
+
+pass 2/2: expanding 400 questions that at least one gate fired on ...
+  25/400  (1820s)
+  50/400  (2090s)
+  75/400  (2412s)
+  100/400  (2738s)
+  125/400  (3058s)
+  150/400  (3378s)
+  175/400  (3736s)
+  200/400  (4074s)
+  225/400  (4387s)
+  250/400  (4679s)
+  275/400  (4975s)
+  300/400  (5256s)
+  325/400  (5541s)
+  350/400  (5849s)
+  375/400  (6312s)
+  400/400  (6655s)
+
+no-analysis mode: wrote the CSV and computed no accuracy.
+wall-clock: 110.9 min
