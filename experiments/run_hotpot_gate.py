@@ -90,6 +90,13 @@ def parse_args() -> argparse.Namespace:
                         "resulting sample is not disjoint from it")
     p.add_argument("--out-prefix", default="hotpot_gate",
                    help="basename for the emitted CSV and meta JSON")
+    p.add_argument("--pool-n", type=int, default=None,
+                   help="Addendum 6: build ONE dense index over the paragraphs "
+                        "of this many questions and retrieve from it, instead "
+                        "of the 10 paragraphs supplied per question")
+    p.add_argument("--pool-seed", type=int, default=20261020,
+                   help="seed of the pooled superset draw (must match the "
+                        "sweep that measured its recalls)")
     p.add_argument("--r-v2", action="store_true",
                    help="use the Addendum 5 repair r_v2 = (coverage + "
                         "support_frac)/2 instead of the legacy r")
@@ -261,6 +268,26 @@ def main() -> None:
             excluded |= got
             print(f"excluding  : {len(got):5d} qids from {part}")
         print(f"excluding  : {len(excluded)} distinct qids in total")
+    pooled_retr = None
+    pooled_title_of = None
+    if args.pool_n:
+        # The index is the paragraphs of the WHOLE superset; the questions we
+        # query are a disjoint subset of it, so the recalls measured by
+        # experiments/sweep_pool_size.py apply unchanged.
+        superset = stratified_sample(allex, args.pool_n, seed=args.pool_seed)
+        t2t = {}
+        for e in superset:
+            for pr in e.paragraphs:
+                t2t.setdefault(pr.title, pr.text)
+        pooled_title_of = {v: k for k, v in t2t.items()}
+        print(f"pooled idx : building over {len(t2t)} distinct passages from "
+              f"{len(superset)} questions (seed {args.pool_seed}) ...")
+        pooled_retr = DenseRetriever()
+        pooled_retr.index([Document(t, x) for t, x in t2t.items()])
+        print(f"pooled idx : ready, {len(t2t)} passages")
+        superset_ids = {e.qid for e in superset}
+        allex = [e for e in allex if e.qid in superset_ids]
+
     pool = [e for e in allex
             if (args.qtype is None or e.qtype == args.qtype)
             and e.qid not in excluded]
@@ -311,13 +338,32 @@ def main() -> None:
     retrievers: Dict[str, Tuple[DenseRetriever, Dict[str, str]]] = {}
     recoverable: List[str] = []
     sufficient: List[str] = []
+    foreign_counts: List[int] = []
 
     for i, ex in enumerate(sample):
-        r = DenseRetriever()
-        r.index([Document(p.title, p.text) for p in ex.paragraphs])
-        title_of = {p.text: p.title for p in ex.paragraphs}
+        if pooled_retr is not None:
+            r, title_of = pooled_retr, pooled_title_of
+        else:
+            r = DenseRetriever()
+            r.index([Document(p.title, p.text) for p in ex.paragraphs])
+            title_of = {p.text: p.title for p in ex.paragraphs}
         retrievers[ex.qid] = (r, title_of)
         st = score_stage(ex, args.k_base, r, reader, nli, scorer, title_of)
+        if pooled_retr is not None:
+            # Assert on the INDEX, which is the thing that must be pooled. A
+            # single question legitimately retrieving only its own paragraphs
+            # proves nothing: at Recall@3 = 0.61 that happens often, and an
+            # earlier version of this check aborted on it wrongly.
+            if i == 0:
+                n_docs = len(pooled_retr.documents)
+                print(f"pooled idx : ASSERT -- retriever holds {n_docs} "
+                      f"documents (must be >> 10)")
+                if n_docs <= len(ex.paragraphs):
+                    raise SystemExit(
+                        f"ABORT: retriever holds only {n_docs} documents, so "
+                        "retrieval is not from the pooled index")
+            own = {pp.title for pp in ex.paragraphs}
+            foreign_counts.append(sum(1 for t in st.titles if t not in own))
         base[ex.qid] = st
         if ex.gold_titles.issubset(set(st.titles)):
             sufficient.append(ex.qid)
@@ -327,6 +373,12 @@ def main() -> None:
             print(f"  {i + 1}/{len(sample)}  ({time.time() - t_start:.0f}s)")
 
     n = len(sample)
+    if foreign_counts:
+        tot_f = sum(foreign_counts)
+        tot_p = sum(len(base[q].titles) for q in base)
+        print(f"\npooled idx : {tot_f} of {tot_p} base-depth passages came "
+              f"from OTHER questions ({100 * tot_f / max(1, tot_p):.1f}%) -- "
+              f"confirms retrieval is pooled, not per-question")
     print(f"\nrecoverable-miss subset : {len(recoverable)}/{n} "
           f"({100 * len(recoverable) / n:.1f}%)")
     print(f"top-{args.k_base} already sufficient : {len(sufficient)}/{n} "
@@ -367,7 +419,7 @@ def main() -> None:
         r, title_of = retrievers[qid]
         stages = []
         for k in ladder:
-            if k > len(ex.paragraphs):
+            if pooled_retr is None and k > len(ex.paragraphs):
                 break
             stages.append(score_stage(ex, k, r, reader, nli, scorer, title_of))
         expanded[qid] = stages
@@ -434,6 +486,7 @@ def main() -> None:
     meta = {"commit": git_commit(), "n": n, "k_base": args.k_base,
             "k_schedule": list(ladder), "seed": args.seed,
             "r_v2": bool(args.r_v2),
+            "pool_n": args.pool_n, "pool_seed": args.pool_seed,
             "relevance_floor_v2": (scorer.relevance_floor_v2
                                    if args.r_v2 else None),
             "rate_c": rate_c, "thresholds": thresholds,
