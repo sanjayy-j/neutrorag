@@ -1,0 +1,56 @@
+==============================================================================
+VERIFICATION OF REPORT-ASSERTED FIGURES against committed artefacts
+==============================================================================
+repo commit 2460554
+
+item                                                   asserted   computed  status
+-----------------------------------------------------------------------------------------------
+A. FEVER argmax(T,I,F)                                    0.665      0.665  PASS
+A. FEVER raw argmax(e,n,c)                                0.755      0.755  PASS
+A. FEVER exact McNemar p                                  4e-05  4.005e-05  PASS
+                                                                            -> b=1 c=19; exact p=4.005e-05, report rounds to 4.0e-5
+A. FEVER n                                                  200        200  PASS
+B. recoverable-miss, fixed-k EM                          0.1486     0.1486  PASS
+B. recoverable-miss, I-gate EM                           0.2432     0.2432  PASS
+B. recoverable-miss McNemar p                            0.0011     0.0011  PASS
+                                                                            -> b=30 c=9, n=222
+B. recoverable-miss n                                       222        222  PASS
+C. AUROC r for gold_in_context                           0.5958     0.5958  PASS
+C. AUROC max_relevance, same label                       0.5004     0.5004  PASS
+C. DeLong p, r vs max_relevance                          0.0149     0.0149  PASS
+                                                                            -> z=2.435; modest effect, CI [0.5404, 0.6511]
+D. hard-retrieval AUROC r for em                         0.6032     0.6032  PASS
+D. hard-retrieval CI low                                 0.5331     0.5331  PASS
+D. hard-retrieval CI high                                0.6733     0.6733  PASS
+D. hard-retrieval n                                         400        400  PASS
+D. CI excludes 0.5                                         True       True  PASS
+E. H2 manipulation check (i), r_v2>0.5                   0.7775     0.7775  PASS
+E. H2 I-gate EM                                            0.29       0.29  PASS
+E. H2 max(e,n,c) EM                                      0.3075     0.3075  PASS
+E. H2 I-gate did NOT beat the scalar                       True       True  PASS
+                                                                            -> two-sided McNemar p=0.2295, b=9 c=16: non-significant and must stay so in prose
+F. paired DeLong p (label-agreeing subset)               0.0844     0.0844  PASS
+                                                                            -> z=1.725, n=367 of 400
+F. four samples pairwise disjoint                          True       True  PASS
+                                                                            -> sizes Phase3=400, H1=600, H2=400, H3=400
+CONFLICTS release total                                     458        458  PASS
+CONFLICTS scored sample                                     100        100  PASS
+CONFLICTS policy-test denominator                            80         80  PASS
+                                                                            -> 100 minus Complementary(10) and Outdated(10), which carry NO expected action; NOT minus the 5 Misinformation instances
+CONFLICTS Misinformation in the scored sample                 0          0  PASS
+                                                                            -> the 5 Misinformation instances were never sampled, so '100 minus 5' would wrongly imply 95
+CONFLICTS expected-action accuracy                          0.2        0.2  PASS
+                                                                            -> 16/80
+manifest total claims                                        66         66  PASS
+manifest pre-registered                                      29         29  PASS
+references checked                                           18         18  PASS
+references reconcile (correct + errors == checked)         True       True  PASS
+                                                                            -> 15 + 3 = 18
+RQ5 / RQ6 exist                                               -          -  UNVERIFIABLE
+                                                                            -> PREREGISTRATION.md defines RQ1-RQ4 only; no RQ5 or RQ6 appears anywhere in the repository
+simulated-cascade findings                                    -          -  UNVERIFIABLE
+                                                                            -> no 'simulated cascade' artefact, script or result exists in the repository
+Table 6.1 / Table 10.1, pages 20 / 49                         -          -  UNVERIFIABLE
+                                                                            -> the report is a .docx edited outside this repository (CITATIONS.md line 3); it has never been committed on any branch
+-----------------------------------------------------------------------------------------------
+PASS 31   MISMATCH 0   UNVERIFIABLE 3

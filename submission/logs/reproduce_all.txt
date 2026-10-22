@@ -1,0 +1,259 @@
+NeutroRAG -- reproduce every claimed number
+  commit      : 2460554  (Addendum 6 conditional secondary: paired comparison, and the write-up)
+  working tree: DIRTY -- numbers below may not match the commit
+
+==============================================================================
+1. Library behaviour (offline, mock NLI)
+==============================================================================
+
+  MockNLIBackend.predict returns a distribution (memo F11)
+    value   : max |sum - 1| = 0.00e+00
+    command : python -m pytest tests/test_memo_regressions.py -k distribution
+    commit  : 2460554
+    note    : pre-fix this was 0.100 on 4 of 6 branch-covering inputs
+
+  README quickstart triple
+    value   : TIF(T=0.091, I=0.000, F=1.000)
+    command : python experiments/reproduce_all.py
+    commit  : 2460554
+    note    : README.md quickstart quotes this value; it moved with the F11 fix and again with the Decision-2 saturation targets
+
+  README quickstart expansion outcomes
+    value   : with expand_fn -> answer (1 expansion); without -> abstain (0)
+    command : python experiments/reproduce_all.py
+    commit  : 2460554
+    note    : memo F16: the old example omitted expand_fn, so EXPAND fell through to ABSTAIN
+
+==============================================================================
+2. demo.py -- embedded 12-example sample (MOCK NLI, illustrative only)
+==============================================================================
+
+  attribution accuracy on the embedded sample
+    value   : 0.833  (n=12)
+    command : python demo.py
+    commit  : 2460554
+    note    : MOCK NLI on 12 hand-written examples -- not a research result
+
+  [RETRACTED] fuzzy-collapse delta on the embedded sample
+    was     : previously reported here as a number
+    reason  : WITHDRAWN (memo F4). Merging the I and F gold classes caps the collapsed score at the majority-class prior, so any positive delta is arithmetic rather than evidence for the I/F distinction. demo.py no longer prints it either -- it prints a retraction notice -- so no command reproduces this figure by design. See RESULTS.md (Retractions).
+    commit  : 2460554
+
+==============================================================================
+3. FEVER run, n=200 -- CURRENT construction (this is RQ1)
+==============================================================================
+
+  Construction: r = retrieval sufficiency, I = max(1-r, n), pairwise
+  disagree, Decision-2 saturation targets.
+
+  attribution accuracy, argmax(T,I,F)
+    value   : 0.6650 +/- 0.0334 (Wald SE), 95% CI [0.600, 0.730]
+    command : python experiments/run_fever_eval.py --limit 200 --csv fever_run_200_current.csv
+    commit  : 2460554
+    note    : the current construction, not the submitted one
+
+  baseline accuracy, argmax(e,n,c)
+    value   : 0.7550 +/- 0.0304 (Wald SE), 95% CI [0.695, 0.815]
+    command : python experiments/make_results_table.py --csv fever_run_200_current.csv
+    commit  : 2460554
+    note    : identical NLI calls; independent of r and I, so unchanged since Gate A
+
+  difference (NeutroRAG - baseline)
+    value   : -0.0900 accuracy; predictions differ on 20/200 rows
+    command : python experiments/make_results_table.py --csv fever_run_200_current.csv
+    commit  : 2460554
+    note    : RQ1 answer: the decomposition does NOT beat the classifier alone
+
+  exact McNemar on paired predictions
+    value   : b=1 (NeutroRAG only right) c=19 (baseline only right) p=0.0000 -- SIGNIFICANT at alpha=0.05
+    command : python experiments/make_results_table.py --csv fever_run_200_current.csv
+    commit  : 2460554
+    note    : the gap is now statistically significant; at Gate A it was not
+
+  N_empty (rows hitting the empty-evidence shortcut, memo F3)
+    value   : 0 of 200
+    command : python experiments/run_fever_eval.py --limit 200 --csv fever_run_200_current.csv
+    commit  : 2460554
+    note    : the F3 code path is live but fired zero times in this run
+
+  r across the run (memo F1, resolved by Gate B)
+    value   : 26 distinct values, median 0.750, range [0.500, 1.000]
+    command : python experiments/run_fever_eval.py --limit 200 --csv fever_run_200_current.csv
+    commit  : 2460554
+    note    : r is now computed from retrieval state; at Gate A it was the constant 0.9
+
+  pairwise disagree distribution (memo F6/F9)
+    value   : median=0.0115 mean=0.0299 max=0.7165; 13/200 rows exceed 0.1
+    command : python experiments/run_fever_eval.py --limit 200 --csv fever_run_200_current.csv
+    commit  : 2460554
+    note    : the conflict term is near-inert on FEVER: 185/200 rows carry a single passage, so there is no pair to compare
+
+  mass identity T+I+F == 1 + lambda*disagree (memo F5)
+    value   : max deviation over 200 rows = 2.28e-01 -- IDENTITY BROKEN
+    command : python experiments/check_mass_identity.py
+    commit  : 2460554
+    note    : intended: I = max(1-r, n) breaks the identity that made 'T+I+F > 1' vacuous. The revised Gate B prediction is confirmed
+
+  mass T+I+F distribution
+    value   : min=0.775 median=0.988 max=1.277; exceeds 1 on 49/200 rows (24.5%)
+    command : python experiments/check_mass_identity.py
+    commit  : 2460554
+    note    : under the OLD I every row exceeded 1 by construction, so the two criteria disagree on 151/200 (75.5%) of rows
+
+==============================================================================
+3b. FEVER run, n=200 -- GATE A snapshot (historical, superseded)
+==============================================================================
+
+  fever_run_200_gateA.csv is the per-example dump for the construction exactly
+  as submitted at First Review: constant r = 0.9, I = (1-r) + r*n,
+  pooled disagree. Retained unmodified because the retraction of the
+  0.745 headline rests on it. These are NOT current numbers.
+
+  [GATE A] attribution accuracy, argmax(T,I,F)
+    value   : 0.7450 +/- 0.0308 (Wald SE)
+    command : python experiments/make_results_table.py --csv fever_run_200_gateA.csv
+    commit  : 2460554
+    note    : the submitted headline; RETRACTED below
+
+  [GATE A] baseline accuracy, argmax(e,n,c)
+    value   : 0.7550
+    command : python experiments/make_results_table.py --csv fever_run_200_gateA.csv
+    commit  : 2460554
+    note    : identical to the current baseline (0.7550) because e/n/c are bit-identical across both CSVs
+
+  [GATE A] difference and McNemar
+    value   : -0.0100 accuracy; b=1 c=3 p=0.6250 (not significant)
+    command : python experiments/make_results_table.py --csv fever_run_200_gateA.csv
+    commit  : 2460554
+    note    : at Gate A the gap was small and not significant; under the current construction it is larger and significant
+
+  [GATE A] mass identity T+I+F == 1 + lambda*disagree
+    value   : max deviation over 200 rows = 2.22e-16 -- identity HELD
+    command : python experiments/reproduce_all.py
+    commit  : 2460554
+    note    : this is why 'T+I+F > 1 shows independence' was retracted: under the submitted I it was an algebraic identity, true of any input
+
+  [RETRACTED] fuzzy-collapse ablation delta (+0.205)
+    was     : full 0.745 vs collapsed 0.540, delta +0.205
+    reason  : arithmetic, not an experiment (memo F4). Any I/F-merged model is capped at (65+68)/200 = 0.665 by the label prior, and 0.540 is recoverable from the confusion matrix by summing two columns.
+    commit  : 2460554
+
+  [RETRACTED] 0.745 as a NeutroRAG result
+    was     : 0.745 failure-type attribution accuracy
+    reason  : GATE A: raw argmax(e,n,c) on the identical NLI calls scores 0.7550. The neutrosophic layer added nothing measurable. Under the current construction the layer scores 0.6650, i.e. 0.0900 BELOW the same baseline (p=0.0000).
+    commit  : 2460554
+
+==============================================================================
+5. HotpotQA: retrieval, and the pre-registered gate experiment
+==============================================================================
+
+  retrieval: Recall@k, MRR, nDCG@10
+    value   : R@1 0.4088 R@2 0.6150 R@3 0.7013 R@5 0.8137 R@10 1.0000; MRR 0.8904; nDCG@10 0.8431
+    command : python experiments/run_hotpot_retrieval.py
+    commit  : 2460554
+    note    : Recall@10 = 1.0 is an index-completeness check, not a result
+
+  PRE-REGISTERED PRIMARY: I-gate vs scalar gate at equal budget
+    value   : EM 0.3025 (I-gate) vs 0.3225 (max(e,n,c)); difference -0.0200
+    command : python experiments/analyse_hotpot_gate.py
+    commit  : 2460554
+    note    : the stop condition FIRED: the decomposed gate did not beat the scalar. Phases 4-5 were not run
+
+  expansion vs no expansion on the recoverable-miss subset
+    value   : EM 0.1486 -> 0.2432 over 222/400 questions
+    command : python experiments/analyse_hotpot_gate.py
+    commit  : 2460554
+    note    : the one significant positive result in Phase 3 (p=0.0011)
+
+  pooled EM, condition a_fixed_k
+    value   : 0.2675
+    command : python experiments/analyse_hotpot_gate.py
+    commit  : 2460554
+    note    : read against the extractive ceiling of 0.938, never against 1.0
+
+  pooled EM, condition b_scalar_entail
+    value   : 0.3100
+    command : python experiments/analyse_hotpot_gate.py
+    commit  : 2460554
+    note    : read against the extractive ceiling of 0.938, never against 1.0
+
+  pooled EM, condition b_scalar_max_enc
+    value   : 0.3225
+    command : python experiments/analyse_hotpot_gate.py
+    commit  : 2460554
+    note    : read against the extractive ceiling of 0.938, never against 1.0
+
+  pooled EM, condition b_scalar_one_minus_n
+    value   : 0.3075
+    command : python experiments/analyse_hotpot_gate.py
+    commit  : 2460554
+    note    : read against the extractive ceiling of 0.938, never against 1.0
+
+  pooled EM, condition c_i_gate
+    value   : 0.3025
+    command : python experiments/analyse_hotpot_gate.py
+    commit  : 2460554
+    note    : read against the extractive ceiling of 0.938, never against 1.0
+
+  r reduces to an affine function of coverage alone
+    value   : r = 0.3333*coverage + 0.2000; max residual 1.11e-16 over 400 questions; r confined to [0.2000, 0.5333]
+    command : python experiments/diagnose_r_components.py
+    commit  : 2460554
+    note    : support_count and diversity have exactly zero variance; connectivity is dropped (no graph)
+
+  Full manifest of all claims, with tests and pre-registration status:
+    results/claims.md (python experiments/make_claims_manifest.py)
+
+==============================================================================
+6. Analysis scripts -- invoked, not merely cited
+==============================================================================
+
+  six analysers, ~2 min total (two of them re-embed the corpus)
+
+  [        ok] Phase 3 gate analysis
+  [        ok] Phase 3 by question type
+  [        ok] r vs retrieval depth
+  [        ok] regenerate the claims manifest
+  [        ok] r component diagnostics (~60s: re-embeds the corpus)
+  [        ok] Phase 2 retrieval metrics (~60s: re-embeds the corpus)
+
+  all 6 invoked analysis scripts completed cleanly
+
+==============================================================================
+7. Train/test contamination (memo F10) -- requires network
+==============================================================================
+
+  overlap with FEVER-NLI train split
+    value   : 0 / 196 distinct claims (0.0%), 0 claim-IDs
+    command : see experiments/check_contamination.py
+    commit  : 2460554
+    note    : no training contamination
+
+  overlap with FEVER-NLI dev split
+    value   : 196 / 196 distinct claims (100%), 196 claim-IDs
+    command : see experiments/check_contamination.py
+    commit  : 2460554
+    note    : the evaluation set IS the model's own reported dev split (model card: 'the dev set for Fever-NLI', reported 0.777)
+
+==============================================================================
+8. Model-dependent runs
+==============================================================================
+
+  skipped (pass --with-models to run these):
+    regenerate fever_run_200_current.csv (~150s CPU)
+      python experiments/run_fever_eval.py --limit 200 --csv fever_run_200_current.csv
+    pipeline demo, real NLI (the Section 5(d) trace; the report's screenshot is a historical artefact and no longer matches -- the action now flips to SURFACE_CONTRADICTION, see RESULTS.md)
+      python experiments/run_pipeline_demo.py --nli real
+    contamination check (downloads pietrolesci/nli_fever)
+      python experiments/check_contamination.py
+    saturation targets from depth alone (no accuracy; Decision 2)
+      python experiments/derive_targets.py
+    pairwise-mode sanity gate, real NLI (Decision 1)
+      python experiments/check_pairwise_sanity.py --nli real
+    CONFLICTS pairwise cache (~2.5h) then the policy test
+      python experiments/score_conflicts_pairwise.py
+    the policy test itself
+      python experiments/run_conflicts_pairwise_eval.py
+
+See RESULTS.md for the same numbers with commentary and retractions.
+
