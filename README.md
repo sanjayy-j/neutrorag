@@ -47,8 +47,9 @@ against the project's own idea.
   still lost: **0.2900 vs 0.3075** for `max(e,n,c)`, direction reversed,
   one-sided **p = 0.9461**. So the failure was not that `r` lacked range — that
   defect was real, it was fixed, and fixing it did not help.
-- **H3 — positive** (Addendum 6, n = 400, pooled index, disjoint). See finding 3
-  above. This is the one registered test of the central idea that succeeded.
+- **H3 — positive** (Addendum 6, n = 400, pooled index, disjoint). See *Three findings
+  that are positive and significant*, item 3, in the next section. This is the
+  one registered test of the central idea that succeeded.
 
 **Three of ten registered tests are positive.** Ten registered, **nine
 executed** (RQ4 was never run), three positive: RQ1's dilution invariance,
