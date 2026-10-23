@@ -133,15 +133,15 @@ python experiments/make_claims_manifest.py     # regenerate results/claims.md
 
 | file | what it is |
 |---|---|
-| [`results/claims.md`](results/claims.md) | **authoritative manifest** — all 46 claims, figures, tests, n, regenerating script, and whether pre-registered. Every figure recomputed from the artefacts, none transcribed. |
-| [`PREREGISTRATION.md`](PREREGISTRATION.md) | the four research questions, predictions and stop conditions, registered before the data was seen; three dated addenda recording a wiring bug, a structural limit and the outcome |
+| [`results/claims.md`](results/claims.md) | **authoritative manifest** — all 66 claims, figures, tests, n, regenerating script, and whether pre-registered. Every figure recomputed from the artefacts, none transcribed. |
+| [`PREREGISTRATION.md`](PREREGISTRATION.md) | the **four** research questions (RQ1–RQ4) and **three** further registered hypotheses (H1, H2, and Addendum 6's primary), with their predictions and stop conditions, all recorded before the data was seen; **Addenda 1–6**, dated, covering a wiring bug, a structural limit, the Phase 3 outcome, and the three later tests |
 | [`RESULTS.md`](RESULTS.md) | full narrative, every table citing its script, with withdrawn claims collected at the end |
 | [`CITATIONS.md`](CITATIONS.md) | citation audit trail; all 18 post-2023 references verified against publisher records |
 | [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) | runbook for a 3–5 minute recording of the diagnosis |
 
 ## Read the numbers with these caveats
 
-- **Only 9 of 46 claims are pre-registered.** The by-type split, the component
+- **Only 29 of 66 claims are pre-registered.** The by-type split, the component
   diagnostics and the depth analysis were chosen *after* seeing the null. They
   are the most interesting findings here and they are **exploratory**; p-values
   are not corrected for that selection.
