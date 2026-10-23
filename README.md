@@ -100,7 +100,11 @@ Expanding retrieval then moves `r` mechanically: at full depth both count-based
 components saturate, so `r = coverage/3 + 0.6667` and **+0.4667 of every
 expansion's gain in `r` is arithmetic**. Retrieval depth alone explains
 **η² = 0.9144** of the I-gate's change in `r`, and the fraction of questions
-with `r > 0.5` goes from **14.8% to 80–81% purely by expanding**. Since
+with `r > 0.5` goes from **14.8% at base depth to 80–81% purely by expanding**
+— legacy `r`, the same construction at two retrieval depths. (Do not confuse
+this with the Addendum 5 manipulation check, which compares two *constructions*
+at the same base depth: legacy `r` at 14.8% against `r_v2` at **77.75%**. Both
+figures start from 14.8% and they measure different things.) Since
 `T = r·e ≤ r` and `I ≥ 1−r`, the gate `I > T` is pushed toward *true* before
 expanding and toward *false* after — by arithmetic on the depth the gate itself
 chose.
@@ -125,7 +129,7 @@ That prints every claimed number with the command and commit that produced it,
 offline, and lists retracted figures as `[RETRACTED]` rather than dropping them.
 
 ```bash
-python -m pytest -q                            # 141 passed, 6 skipped, 3 xfailed
+python -m pytest -q                            # 157 passed, 6 skipped, 3 xfailed
 python experiments/make_claims_manifest.py     # regenerate results/claims.md
 ```
 
@@ -154,7 +158,8 @@ python experiments/make_claims_manifest.py     # regenerate results/claims.md
   n=400, seed 20261019.
 - **Earlier FEVER results are negative and retained**, not removed: the
   decomposition scores 0.6650 against a bare NLI classifier's 0.7550 on
-  identical model calls (p=0.0000). Three figures from the First Review are
+  identical model calls (**p < 0.0001**; exact two-sided McNemar
+  4.005 × 10⁻⁵, b=1, c=19). Three figures from the First Review are
   **retracted** and listed as such in [`RESULTS.md`](RESULTS.md).
 - The 200 FEVER claims **are** the NLI model's own reported dev split (196/196
   overlap), so those figures are not held-out.
