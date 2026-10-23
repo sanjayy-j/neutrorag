@@ -36,6 +36,23 @@ decomposed gate must *beat* the scalar. It beat none of three scalars tested.
    **rho = 0.2232 (p<0.0001)** — and 0.4338 on comparison questions — while the
    retriever's own `max_relevance` reaches **0.0196 (p=0.6956)**, no measurable
    relation at all.
+3. **`r` predicts answer correctness once retrieval is the binding constraint**
+   — the one registered test of the central idea that came out positive. Under a
+   pooled 19,294-passage index, AUROC of `r` for Exact Match is **0.6032**, 95%
+   CI **[0.5331, 0.6733]**, which excludes 0.5 (Addendum 6, n=400). Under the
+   easy per-question retrieval of the earlier phases it does not: 0.5483 and
+   0.4689. Its secondary is the project's strongest single comparison — for
+   *retrieval success* `r` reaches AUROC **0.7195** [0.6671, 0.7719] against the
+   retriever's own score at 0.5624, a DeLong margin of **+0.1570, z = 4.698,
+   p < 0.0001**.
+
+**RQ2, as registered in the proposal, was also computed.** AUROC of `r` for
+retrieval success is **0.5958** [0.5404, 0.6511] against `max_relevance` at
+**0.5004**, DeLong **z = 2.435, p = 0.0149** — so `r` significantly beats the
+retriever's own relevance score, while the retriever's score is itself
+indistinguishable from chance at predicting whether its own retrieval worked.
+The effect is modest and the earlier Spearman figure above is the same finding
+in a weaker metric.
 
 ## Why the gate failed: it reads back its own action
 
@@ -113,10 +130,10 @@ python experiments/make_claims_manifest.py     # regenerate results/claims.md
 
 ## Not measured, not claimed
 
-Faithfulness, citation accuracy, AURC, ECE, Brier, the RQ4 cost comparison
-against a published LLM gate, and RQ2 proper (AUROC of `r` for answerability).
-All were specified for phases that the stop condition prevented. No value for
-any of them appears anywhere in this repository.
+Faithfulness, citation accuracy, AURC, ECE, Brier, and the RQ4 cost
+comparison against a published LLM gate. All were specified for phases that the
+stop condition prevented. No value for any of them appears anywhere in this
+repository.
 
 ## Status
 
