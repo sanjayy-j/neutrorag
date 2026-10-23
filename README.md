@@ -25,7 +25,38 @@ significant, and in the wrong direction. The registered condition was that the
 decomposed gate must *beat* the scalar. It beat none of three scalars tested.
 **Phases 4 and 5 were not run**, as the pre-registration requires.
 
-## Two findings that are positive and significant
+## Three further registered tests, run after that refutation
+
+Two more pre-registered hypotheses failed, on samples disjoint from the first
+and from each other. Both are reported because they are the strongest evidence
+against the project's own idea.
+
+- **H1 — the comparison-question finding did not replicate** (Addendum 4,
+  n = 600, disjoint). Phase 3's exploratory by-type result said expansion
+  degrades comparison questions below fixed `k`. Registered as a directional
+  hypothesis and retested, the effect shrank from **−0.0506 to −0.0033**, about
+  fifteenfold, one-sided **p = 0.4388**, and the 4-of-4 uniformity that made it
+  look real became **1 of 4**. **Withdrawn as a finding.** What survives is only
+  that expansion gives no measurable benefit there either.
+- **H2 — the repaired construction was falsified** (Addendum 5, n = 400,
+  disjoint). Phase 3's gate was crippled: `r` could not exceed 0.5333, so
+  "well supported, do not expand" was unrepresentable. `r_v2` fixed that, and
+  **both pre-registered manipulation checks confirmed the repair took effect** —
+  `r_v2 > 0.5` on **77.75%** of questions at base depth against 14.8% for legacy
+  `r`, and the depth-circularity η² down from **0.9144 to 0.1172**. The gate
+  still lost: **0.2900 vs 0.3075** for `max(e,n,c)`, direction reversed,
+  one-sided **p = 0.9461**. So the failure was not that `r` lacked range — that
+  defect was real, it was fixed, and fixing it did not help.
+- **H3 — positive** (Addendum 6, n = 400, pooled index, disjoint). See finding 3
+  above. This is the one registered test of the central idea that succeeded.
+
+**Three of ten registered tests are positive.** Ten registered, **nine
+executed** (RQ4 was never run), three positive: RQ1's dilution invariance,
+expansion on recoverable misses, and Addendum 6. The full inventory, with the
+definition of "positive", is in
+[`submission/TEST_INVENTORY.md`](submission/TEST_INVENTORY.md).
+
+## Three findings that are positive and significant
 
 1. **Expansion helps on recoverable misses.** On the 222/400 questions where a
    gold paragraph sits outside the top-k, Exact Match rises **0.1486 → 0.2432**,
