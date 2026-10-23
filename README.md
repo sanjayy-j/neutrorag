@@ -173,8 +173,11 @@ repository.
 | core library: TIF, scorer, five-way policy, tests | done |
 | real NLI backend, real FEVER data, dense + graph retrieval, generation | done |
 | pre-registered HotpotQA gate experiment | done — **hypothesis refuted** |
-| Phases 4–5 (answerability AUROC, selective prediction, cost) | **not run** — stop condition fired |
-| successor construction meeting the four requirements | not attempted |
+| Phase 4 — answerability AUROC (RQ2) | **run later**, after the stop condition: AUROC 0.5958 vs 0.5004, DeLong p = 0.0149 |
+| Phase 5 — selective prediction (AURC, ECE, Brier), faithfulness, citation accuracy | **not run** — stop condition fired |
+| RQ4 — cost comparison against a published LLM gate | **not run** — stop condition fired |
+| successor construction meeting the four requirements | **built and tested, then falsified** — `r_v2` (Addendum 5) passed both manipulation checks and still lost to `max(e,n,c)` |
+| hard-retrieval test of `r` (Addendum 6) | done — **positive**, the one registered success |
 
 ## Use of AI assistance
 
