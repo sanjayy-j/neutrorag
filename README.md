@@ -51,11 +51,16 @@ against the project's own idea.
   that are positive and significant*, item 3, in the next section. This is the
   one registered test of the central idea that succeeded.
 
-**Three of ten registered tests are positive.** Ten registered, **nine
-executed** (RQ4 was never run), three positive: RQ1's dilution invariance,
-expansion on recoverable misses, and Addendum 6. The full inventory, with the
-definition of "positive", is in
-[`submission/TEST_INVENTORY.md`](submission/TEST_INVENTORY.md).
+**Three of ten registered tests are positive**, under the definitions in
+[`submission/TEST_INVENTORY.md`](submission/TEST_INVENTORY.md): ten registered, nine
+executed, three positive — the dilution-invariance result, expansion on recoverable
+misses, and Addendum 6's hard-retrieval test.
+
+> **A note on numbering.** This repository numbers its research questions as
+> `PREREGISTRATION.md` defines them, RQ1–RQ4. The project report uses its own RQ1–RQ6
+> numbering over a different arrangement of the same work, and it says so. An `RQn`
+> label here and an `RQn` label in the report are therefore **not** the same question —
+> cross-check by question text, not by number. No figure differs between the two.
 
 ## Three findings that are positive and significant
 
@@ -139,7 +144,7 @@ python experiments/make_claims_manifest.py     # regenerate results/claims.md
 | file | what it is |
 |---|---|
 | [`results/claims.md`](results/claims.md) | **authoritative manifest** — all 66 claims, figures, tests, n, regenerating script, and whether pre-registered. Every figure recomputed from the artefacts, none transcribed. |
-| [`PREREGISTRATION.md`](PREREGISTRATION.md) | the **four** research questions (RQ1–RQ4) and **three** further registered hypotheses (H1, H2, and Addendum 6's primary), with their predictions and stop conditions, all recorded before the data was seen; **Addenda 1–6**, dated, covering a wiring bug, a structural limit, the Phase 3 outcome, and the three later tests |
+| [`PREREGISTRATION.md`](PREREGISTRATION.md) | the **four** research questions it numbers RQ1–RQ4 (not the report's numbering — see the note above) and **three** further registered hypotheses (H1, H2, and Addendum 6's primary), with their predictions and stop conditions, all recorded before the data was seen; **Addenda 1–6**, dated, covering a wiring bug, a structural limit, the Phase 3 outcome, and the three later tests |
 | [`RESULTS.md`](RESULTS.md) | full narrative, every table citing its script, with withdrawn claims collected at the end |
 | [`CITATIONS.md`](CITATIONS.md) | citation audit trail; all 18 post-2023 references verified against publisher records |
 | [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) | runbook for a 3–5 minute recording of the diagnosis |
@@ -167,8 +172,8 @@ python experiments/make_claims_manifest.py     # regenerate results/claims.md
 
 ## Not measured, not claimed
 
-Faithfulness, citation accuracy, AURC, ECE, Brier, and the RQ4 cost
-comparison against a published LLM gate. All were specified for phases that the
+Faithfulness, citation accuracy, AURC, ECE, Brier, and the cost comparison
+against a published LLM gate. All were specified for phases that the
 stop condition prevented. No value for any of them appears anywhere in this
 repository.
 
@@ -181,7 +186,7 @@ repository.
 | pre-registered HotpotQA gate experiment | done — **hypothesis refuted** |
 | Phase 4 — answerability AUROC (RQ2) | **run later**, after the stop condition: AUROC 0.5958 vs 0.5004, DeLong p = 0.0149 |
 | Phase 5 — selective prediction (AURC, ECE, Brier), faithfulness, citation accuracy | **not run** — stop condition fired |
-| RQ4 — cost comparison against a published LLM gate | **not run** — stop condition fired |
+| cost comparison against a published LLM gate | **not run** — stop condition fired |
 | successor construction meeting the four requirements | **built and tested, then falsified** — `r_v2` (Addendum 5) passed both manipulation checks and still lost to `max(e,n,c)` |
 | hard-retrieval test of `r` (Addendum 6) | done — **positive**, the one registered success |
 
