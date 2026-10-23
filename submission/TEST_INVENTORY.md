@@ -70,3 +70,16 @@ findings. **Neither appears anywhere in this repository** — the pre-registrati
 defines RQ1–RQ4 only, and a repo-wide search for "simulated cascade" returns
 nothing. Any such item in the report has no basis in the committed evidence and
 must be either substantiated from a source outside this repository or removed.
+
+> **Correction, superseding the paragraph above on RQ5/RQ6.** The inference
+> drawn there was wrong, and it is left in place rather than deleted so the audit
+> trail stays honest. The two documents use **different RQ numbering over the
+> same work**: this repository numbers its research questions as
+> `PREREGISTRATION.md` defines them, RQ1–RQ4, while the report uses its own
+> RQ1–RQ6 and says so. **The report's RQ5 and RQ6 are the two halves of this
+> repository's RQ3.** So the report's RQ5/RQ6 are substantiated after all, by
+> RQ3's evidence, and **no figure differs between the two documents** — only the
+> labels do. Cross-check by question text, not by number. The
+> "simulated-cascade" half of the original finding is a separate matter and
+> **still stands**: no such artefact exists in this repository.
+

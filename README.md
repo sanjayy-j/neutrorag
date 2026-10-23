@@ -83,7 +83,7 @@ misses, and Addendum 6's hard-retrieval test.
    retriever's own score at 0.5624, a DeLong margin of **+0.1570, z = 4.698,
    p < 0.0001**.
 
-**RQ2, as registered in the proposal, was also computed.** AUROC of `r` for
+**RQ2, as registered in `PREREGISTRATION.md`, was also computed.** AUROC of `r` for
 retrieval success is **0.5958** [0.5404, 0.6511] against `max_relevance` at
 **0.5004**, DeLong **z = 2.435, p = 0.0149** — so `r` significantly beats the
 retriever's own relevance score, while the retriever's score is itself

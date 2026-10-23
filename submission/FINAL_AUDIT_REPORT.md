@@ -38,13 +38,26 @@ itself:
 
 | brief claims | repository says |
 |---|---|
-| an inventory spanning **RQ1–RQ6** | `PREREGISTRATION.md` defines **RQ1–RQ4 only**. No RQ5, no RQ6, anywhere |
+| an inventory spanning **RQ1–RQ6** | ~~`PREREGISTRATION.md` defines **RQ1–RQ4 only**. No RQ5, no RQ6, anywhere~~ — **superseded, see the correction below**: the labels differ between the documents and the report's RQ5/RQ6 are the two halves of this repository's RQ3 |
 | **"simulated-cascade" findings** | no such artefact, script, result or mention exists |
 | Tables 6.1 / 10.1, pages 20 / 49 | the report is not here to contain them |
 
-If the report contains RQ5, RQ6 or a simulated cascade, those claims are not
+~~If the report contains RQ5, RQ6 or a simulated cascade, those claims are not
 supported by any committed evidence and must be substantiated from elsewhere or
-removed.
+removed.~~
+
+> **Correction, superseding the paragraph above on RQ5/RQ6.** The inference
+> drawn there was wrong, and it is left in place rather than deleted so the audit
+> trail stays honest. The two documents use **different RQ numbering over the
+> same work**: this repository numbers its research questions as
+> `PREREGISTRATION.md` defines them, RQ1–RQ4, while the report uses its own
+> RQ1–RQ6 and says so. **The report's RQ5 and RQ6 are the two halves of this
+> repository's RQ3.** So the report's RQ5/RQ6 are substantiated after all, by
+> RQ3's evidence, and **no figure differs between the two documents** — only the
+> labels do. Cross-check by question text, not by number. The
+> "simulated-cascade" half of the original finding is a separate matter and
+> **still stands**: no such artefact exists in this repository.
+
 
 ## 2. Deliverables and exact paths
 
@@ -200,8 +213,10 @@ Frozen artefact intact: `fever_run_200_gateA.csv` still hashes to
    manifest **66 / 29**; references **17 → 18**; CONFLICTS **n = 80 with the
    corrected reason** (Complementary + Outdated, not Misinformation); test counts
    **10 registered / 9 executed / 3 positive** with both caveats.
-3. **Check the report for RQ5, RQ6 and any simulated-cascade claim** — none has
-   repository support.
+3. **Check the report for any simulated-cascade claim** — that one has no
+   repository support. **RQ5/RQ6 no longer need checking:** they are the two
+   halves of this repository's RQ3 under the report's own numbering, and the
+   earlier finding against them is superseded above.
 4. **Authorize a commit** of `submission/` and `experiments/verify_report_claims.py`
    if you want this audit in version control.
 
